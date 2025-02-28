@@ -93,6 +93,61 @@ def get_user_repos(username):
     return repos
 
 
+def get_user_total_stars(username):
+    """
+    获取用户的所有仓库的总 Star 数（包括用户作为 Owner 和 Member 的仓库）。
+    """
+
+    total_stars = 0
+
+    # 遍历仓库类型（Owner 和 Member）
+    for repo_type in ["owner", "member"]:
+        page = 1
+        while True:
+            url = f"https://api.github.com/users/{username}/repos?page={page}&per_page=100&type={repo_type}"
+            response = requests.get(url, headers=headers)
+
+            if response.status_code != 200:
+                print(f"请求 {repo_type} 仓库失败，状态码: {response.status_code}")
+                break
+
+            data = response.json()
+            if not data:
+                break
+
+            # 累加每个仓库的 star 数
+            for repo in data:
+                total_stars += repo.get("stargazers_count", 0)
+
+            page += 1
+
+    return total_stars
+
+
+def calculate_contribution_score(events):
+    """
+    根据用户的活动事件计算贡献分数，返回每个仓库的贡献分数和贡献评价。
+    """
+    weights = {
+        "PushEvent": 0.4,
+        "IssuesEvent": 0.3,
+        "PullRequestEvent": 0.3
+    }
+
+    contribution_scores = []
+    for event in events:
+        event_type = event.get("type")  
+        if event_type in weights:
+            score = weights[event_type]
+            repo_name = event.get("repo", {}).get("name")
+            contribution_scores.append({
+                "repo_name": repo_name,
+                "score": score
+            })
+
+    return contribution_scores
+
+
 def get_user_profile_nation_detect(username):
     """
     获取用户的个人资料信息，并分别获取关注者和关注中的人的国家信息，更新用户国家信息
