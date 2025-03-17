@@ -1,6 +1,5 @@
 from collections import Counter
 import logging
-import os
 
 import requests
 from config import headers
