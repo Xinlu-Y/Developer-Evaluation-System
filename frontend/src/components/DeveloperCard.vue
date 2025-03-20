@@ -51,6 +51,49 @@
         </el-descriptions>
       </div>
 
+      <!-- 国家预测结果 -->
+      <div v-if="developer.country_prediction" class="section">
+        <div class="section-header">
+          <h4>国家预测</h4>
+          <el-tag :type="getPredictionTagType(developer.country_prediction.confidence)" size="small">
+            {{ getPredictionConfidenceText(developer.country_prediction.confidence_level) }}
+          </el-tag>
+        </div>
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="预测结果">
+            <template v-if="developer.country_prediction.should_display">
+              <span>{{ developer.country_prediction.formatted_prediction }}</span>
+            </template>
+            <template v-else-if="developer.country_prediction.predicted_country && developer.country_prediction.predicted_country !== 'Unknown'">
+              <span>{{ getCountryName(developer.country_prediction.predicted_country) }} (置信度: {{ formatConfidence(developer.country_prediction.confidence) }})</span>
+            </template>
+            <template v-else>
+              <span>未知</span>
+            </template>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="showPredictionDetails" label="预测依据">
+            <el-button type="text" @click="togglePredictionDetails">
+              {{ showDetails ? '隐藏详情' : '查看详情' }}
+            </el-button>
+            <div v-if="showDetails" class="prediction-details">
+              <div v-for="(score, country) in developer.country_prediction.country_scores" :key="country" class="evidence-item">
+                <span class="country-code">{{ getCountryName(country) }}:</span>
+                <el-progress :percentage="getPercentage(score)" :color="getColorByScore(score)"></el-progress>
+              </div>
+            </div>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+
+      <!-- 领域分析 -->
+      <div v-if="hasDomainData" class="section">
+        <div class="section-header">
+          <h4>技术领域分析</h4>
+          <el-tag type="success">{{ Object.keys(developer.domains).length }}个领域</el-tag>
+        </div>
+        <domain-chart :domains="developer.domains" :no-data-message="'未能检测到技术领域'"></domain-chart>
+      </div>
+
       <!-- 个人项目 -->
       <div v-if="developer.repositories?.length" class="section">
         <div class="section-header">
@@ -106,17 +149,40 @@
 </template>
 
 <script>
+import DomainChart from './DomainChart.vue'
+
 export default {
   name: 'DeveloperCard',
+  components: {
+    DomainChart
+  },
   props: {
     developer: {
       type: Object,
       required: true
     }
   },
+  data() {
+    return {
+      showDetails: false
+    }
+  },
+  computed: {
+    showPredictionDetails() {
+      return this.developer.country_prediction && 
+             this.developer.country_prediction.country_scores && 
+             Object.keys(this.developer.country_prediction.country_scores).length > 0;
+    },
+    hasDomainData() {
+      return this.developer.domains && Object.keys(this.developer.domains).length > 0;
+    }
+  },
   methods: {
     formatScore(score) {
       return score ? parseFloat(score).toFixed(2) : '0.00';
+    },
+    formatConfidence(confidence) {
+      return confidence ? (confidence * 100).toFixed(1) + '%' : '0%';
     },
     openGithub() {
       window.open(this.developer.profile['GitHub 个人主页'], '_blank');
@@ -124,6 +190,67 @@ export default {
     openRepo(repoName) {
       const username = this.developer.profile.用户名;
       window.open(`https://github.com/${username}/${repoName}`, '_blank');
+    },
+    togglePredictionDetails() {
+      this.showDetails = !this.showDetails;
+    },
+    getPredictionTagType(confidence) {
+      if (!confidence) return 'info';
+      if (confidence > 0.8) return 'success';
+      if (confidence > 0.5) return 'warning';
+      return 'info';
+    },
+    getPredictionConfidenceText(level) {
+      if (!level) return '未知';
+      const levelMap = {
+        '高': '高置信度',
+        '中': '中等置信度',
+        '低': '低置信度',
+        '极低': '极低置信度'
+      };
+      return levelMap[level] || level;
+    },
+    getPercentage(score) {
+      // 将分数转换为百分比，最高分为100%
+      const maxScore = Math.max(...Object.values(this.developer.country_prediction.country_scores));
+      return (score / maxScore) * 100;
+    },
+    getColorByScore(score) {
+      // 根据分数返回不同的颜色
+      const maxScore = Math.max(...Object.values(this.developer.country_prediction.country_scores));
+      const ratio = score / maxScore;
+      if (ratio > 0.8) return '#67C23A';
+      if (ratio > 0.5) return '#E6A23C';
+      return '#909399';
+    },
+    getCountryName(countryCode) {
+      // 国家代码到国家名称的映射
+      const countryMap = {
+        'CN': '中国',
+        'US': '美国',
+        'JP': '日本',
+        'KR': '韩国',
+        'IN': '印度',
+        'GB': '英国',
+        'CA': '加拿大',
+        'AU': '澳大利亚',
+        'DE': '德国',
+        'FR': '法国',
+        'RU': '俄罗斯',
+        'BR': '巴西',
+        'SG': '新加坡',
+        'NL': '荷兰',
+        'SE': '瑞典',
+        'CH': '瑞士',
+        'ES': '西班牙',
+        'IT': '意大利',
+        'IL': '以色列',
+        'FI': '芬兰',
+        'PT': '葡萄牙',
+        'IS': '冰岛',
+        'Unknown': '未知'
+      };
+      return countryMap[countryCode] || `未知(${countryCode})`;
     }
   }
 }
@@ -226,5 +353,25 @@ export default {
 
 :deep(.el-descriptions__label) {
   width: 80px;
+}
+
+.prediction-details {
+  margin-top: 10px;
+}
+
+.evidence-item {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.country-code {
+  width: 80px;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+:deep(.el-progress) {
+  flex: 1;
 }
 </style> 
