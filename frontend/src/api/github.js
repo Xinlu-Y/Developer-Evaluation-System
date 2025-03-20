@@ -78,6 +78,12 @@ export const getDeveloperInfo = (username) => {
   return api.get(`/developer/${username}`)
 }
 
+export const getDeveloperSkills = (username, query = '技术能力分析') => {
+  return api.get(`/developer/skills/${username}`, { 
+    params: { query }
+  })
+}
+
 export const searchByDomain = (params) => {
   return api.get('/search/domain', { params })
 } 

@@ -144,12 +144,36 @@
           </el-table-column>
         </el-table>
       </div>
+
+      <!-- 技术能力总结 -->
+      <div class="section">
+        <div class="section-header">
+          <h4>技术能力总结</h4>
+          <el-tag type="primary" v-if="developer.skill_summary">{{ developer.model || 'AI' }}生成</el-tag>
+          <el-button v-else type="link" size="small" @click="generateSkillSummary" :loading="loadingSkills">
+            生成总结
+          </el-button>
+        </div>
+        <div v-if="developer.skill_summary" class="skill-summary">
+          <div v-html="formattedSkillSummary"></div>
+        </div>
+        <div v-else-if="loadingSkills" class="skill-summary-loading">
+          <el-skeleton :rows="6" animated />
+        </div>
+        <div v-else class="skill-summary-empty">
+          <el-empty description="点击上方按钮生成开发者技术能力总结" :image-size="100"></el-empty>
+        </div>
+      </div>
     </div>
   </el-card>
 </template>
 
 <script>
 import DomainChart from './DomainChart.vue'
+import axios from 'axios'
+import { markdownToHtml } from '../utils/markdown'
+import { getDeveloperSkills } from '../api/github'
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'DeveloperCard',
@@ -164,7 +188,8 @@ export default {
   },
   data() {
     return {
-      showDetails: false
+      showDetails: false,
+      loadingSkills: false
     }
   },
   computed: {
@@ -175,6 +200,11 @@ export default {
     },
     hasDomainData() {
       return this.developer.domains && Object.keys(this.developer.domains).length > 0;
+    },
+    formattedSkillSummary() {
+      if (!this.developer.skill_summary) return '';
+      // 将简单的Markdown格式转换为HTML
+      return markdownToHtml(this.developer.skill_summary);
     }
   },
   methods: {
@@ -251,6 +281,33 @@ export default {
         'Unknown': '未知'
       };
       return countryMap[countryCode] || `未知(${countryCode})`;
+    },
+    // 生成技术能力总结
+    async generateSkillSummary() {
+      if (!this.developer || !this.developer.profile || !this.developer.profile.用户名) {
+        ElMessage.error('无法获取开发者信息');
+        return;
+      }
+      
+      const username = this.developer.profile.用户名;
+      this.loadingSkills = true;
+      
+      try {
+        const response = await getDeveloperSkills(username);
+        if (response.data && response.data.skill_summary) {
+          // 更新开发者对象的技术能力总结和模型名称
+          this.developer.skill_summary = response.data.skill_summary;
+          this.developer.model = response.data.model || 'AI';
+          ElMessage.success('技术能力总结生成成功');
+        } else {
+          ElMessage.warning('生成总结时出现问题，请稍后再试');
+        }
+      } catch (error) {
+        console.error('生成技术能力总结失败:', error);
+        ElMessage.error('生成总结失败: ' + (error.response?.data?.message || error.message));
+      } finally {
+        this.loadingSkills = false;
+      }
     }
   }
 }
@@ -373,5 +430,121 @@ export default {
 
 :deep(.el-progress) {
   flex: 1;
+}
+
+.skill-summary {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  line-height: 1.6;
+}
+
+.skill-summary h3 {
+  font-size: 16px;
+  color: #409EFF;
+  margin-top: 15px;
+  margin-bottom: 8px;
+}
+
+.skill-summary h4 {
+  font-size: 14px;
+  color: #303133;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.skill-summary ul {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.skill-summary li {
+  margin-bottom: 5px;
+}
+
+.skill-summary p {
+  margin: 10px 0;
+}
+
+.skill-summary-empty {
+  padding: 30px 0;
+  text-align: center;
+}
+
+.skill-summary-loading {
+  padding: 15px;
+}
+
+.dev-skill-summary {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.skill-section {
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  border-left: 3px solid #409EFF;
+  background-color: rgba(64, 158, 255, 0.05);
+  border-radius: 0 4px 4px 0;
+}
+
+.skill-section h3 {
+  color: #409EFF;
+  font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.tech-stack {
+  border-left-color: #409EFF;
+}
+
+.domains {
+  border-left-color: #67C23A;
+}
+
+.projects {
+  border-left-color: #E6A23C;
+}
+
+.growth {
+  border-left-color: #F56C6C;
+}
+
+.collaboration {
+  border-left-color: #909399;
+}
+
+.tech-highlight {
+  background-color: rgba(64, 158, 255, 0.15);
+  color: #409EFF;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.skill-rating {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.rating-label {
+  min-width: 70px;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.rating-stars {
+  color: #F56C6C;
+  letter-spacing: 2px;
+}
+
+code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9em;
 }
 </style> 
