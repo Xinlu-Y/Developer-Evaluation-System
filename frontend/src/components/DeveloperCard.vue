@@ -38,21 +38,16 @@
       <el-divider></el-divider>
 
       <div class="info-section">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="国家" :span="developer.profile.国家 ? 1 : 2">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="国家">
             <el-tag size="small" v-if="developer.profile.国家">{{ developer.profile.国家 }}</el-tag>
             <span v-else>未知</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="邮箱" :span="developer.profile.邮箱 ? 1 : 0">
-            <el-link v-if="developer.profile.邮箱" type="primary" :href="`mailto:${developer.profile.邮箱}`">
-              {{ developer.profile.邮箱 }}
-            </el-link>
           </el-descriptions-item>
         </el-descriptions>
       </div>
 
       <!-- 国家预测结果 -->
-      <div v-if="developer.country_prediction" class="section">
+      <div v-if="!developer.profile.国家 && developer.country_prediction" class="section">
         <div class="section-header">
           <h4>国家预测</h4>
           <el-tag :type="getPredictionTagType(developer.country_prediction.confidence)" size="small">
@@ -126,18 +121,18 @@
       <div v-if="developer.contributions?.length" class="section">
         <div class="section-header">
           <h4>参与的项目</h4>
-          <el-tag type="warning">{{ developer.contributions.length }}个贡献</el-tag>
+          <el-tag type="warning">{{ developer.contributions.length }}个项目</el-tag>
         </div>
         <el-table :data="developer.contributions" stripe style="width: 100%" :max-height="300">
           <el-table-column prop="repo_name" label="项目名称" min-width="150" />
           <el-table-column prop="repo_star" label="Star数" width="100">
             <template #default="scope">
-              <span class="star-count">⭐ {{ scope.row.repo_star }}</span>
+              <span class="star-count">⭐ {{ scope.row.Star }}</span>
             </template>
           </el-table-column>
           <el-table-column label="项目地址" min-width="200">
             <template #default="scope">
-              <el-link type="primary" :href="scope.row.repo_url" target="_blank" :underline="false">
+              <el-link type="primary" :href="scope.row.html_url" target="_blank" :underline="false">
                 查看项目
               </el-link>
             </template>

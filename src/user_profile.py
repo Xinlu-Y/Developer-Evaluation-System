@@ -80,7 +80,6 @@ def get_user_repos(username):
     获取用户的仓库信息（包括用户作为 Owner 和 Member 的仓库），并统计总的 Star 数和 Fork 数
     """
 
-
     repos = []
     total_stars = 0
     total_forks = 0
@@ -111,7 +110,8 @@ def get_user_repos(username):
                     "repo_description": repo.get("description"),
                     "Star": star_count,
                     "Fork": fork_count,
-                    "repo_type": repo_type
+                    "repo_type": repo_type,
+                    "html_url": repo.get("html_url", "")
                 })
 
             page += 1
