@@ -42,6 +42,14 @@
             </el-form-item>
           </el-form>
 
+          <!-- 高级选项 -->
+          <div class="advanced-options">
+            <el-checkbox v-model="domainSearch.includeSkills" label="包含技术能力总结" border />
+            <el-tooltip content="启用此选项将尝试为每个开发者生成技术能力总结，可能会增加搜索时间" placement="top">
+              <el-icon class="info-icon"><InfoFilled /></el-icon>
+            </el-tooltip>
+          </div>
+
           <!-- 添加加载状态显示 -->
           <div v-if="loading" class="loading-state">
             <el-card class="loading-card">
@@ -100,13 +108,14 @@ import { ref, reactive } from 'vue'
 import { getDeveloperInfo, searchByDomain as searchByDomainAPI } from '../api/github'
 import DeveloperCard from '../components/DeveloperCard.vue'
 import { ElMessage } from 'element-plus'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, InfoFilled } from '@element-plus/icons-vue'
 
 export default {
   name: 'DeveloperSearch',
   components: {
     DeveloperCard,
-    Loading
+    Loading,
+    InfoFilled
   },
   setup() {
     const activeTab = ref('username')
@@ -121,7 +130,8 @@ export default {
     
     const domainSearch = reactive({
       language: '',
-      topic: ''
+      topic: '',
+      includeSkills: false
     })
 
     const searchByUsername = async () => {
@@ -132,11 +142,37 @@ export default {
       
       loading.value = true
       try {
+        const loadingMessage = ElMessage({
+          message: '正在获取开发者信息，请稍候...',
+          type: 'info',
+          duration: 0
+        })
+        
         const { data } = await getDeveloperInfo(username.value)
         developer.value = data
+        loadingMessage.close()
+        
+        // 检查是否成功获取领域数据
+        if (data.domains && Object.keys(data.domains).length === 0) {
+          ElMessage({
+            message: '获取开发者领域信息失败，可能需要刷新重试',
+            type: 'warning',
+            duration: 5000
+          })
+        }
       } catch (error) {
-        console.error(error)
-        ElMessage.error(error.response?.data?.error || '搜索失败')
+        console.error('搜索错误:', error)
+        ElMessage.closeAll()
+        
+        if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || error.code === 'ECONNRESET') {
+          ElMessage({
+            message: '连接服务器失败，请确保后端服务正在运行并刷新页面重试',
+            type: 'error',
+            duration: 5000
+          })
+        } else {
+          ElMessage.error(error.response?.data?.error || '搜索失败，请稍后重试')
+        }
       } finally {
         loading.value = false
       }
@@ -155,27 +191,17 @@ export default {
       
       try {
         const loadingMessage = ElMessage({
-          message: '正在搜索开发者，这可能需要一些时间（最长3分钟）...',
+          message: '正在搜索开发者，这可能需要一些时间（最长10分钟）...',
           type: 'info',
           duration: 0
         })
-        
-        // 显示预计时间提示
-        setTimeout(() => {
-          if (loading.value) {
-            ElMessage({
-              message: '搜索仍在进行中，请耐心等待...',
-              type: 'info',
-              duration: 5000
-            })
-          }
-        }, 30000)  // 30秒后显示提示
         
         const response = await searchByDomainAPI({
           language: domainSearch.language,
           topic: domainSearch.topic,
           offset: (currentPage.value - 1) * pageSize.value,
-          limit: pageSize.value
+          limit: pageSize.value,
+          include_skills: domainSearch.includeSkills
         })
         
         if (response && response.data) {
@@ -199,24 +225,14 @@ export default {
         console.error('搜索错误:', error)
         ElMessage.closeAll()
         
-        if (error.code === 'ECONNABORTED') {
+        if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || error.code === 'ECONNRESET') {
           ElMessage({
-            message: '搜索时间过长，请尝试缩小搜索范围或稍后重试',
-            type: 'error',
-            duration: 5000
-          })
-        } else if (error.code === 'ERR_NETWORK') {
-          ElMessage({
-            message: '无法连接到服务器，请检查服务器是否正在运行',
+            message: '连接服务器失败，请确保后端服务正在运行并刷新页面重试',
             type: 'error',
             duration: 5000
           })
         } else {
-          ElMessage({
-            message: error.response?.data?.error || '搜索失败，请稍后重试',
-            type: 'error',
-            duration: 5000
-          })
+          ElMessage.error(error.response?.data?.error || '搜索失败，请稍后重试')
         }
         
         // 在错误发生时重置状态
@@ -264,71 +280,173 @@ export default {
 
 <style scoped>
 .developer-search {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  padding: 32px 24px;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .header h1 {
-  color: #409EFF;
-  margin-bottom: 10px;
+  color: #37352f;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
 }
 
 .header p {
-  color: #606266;
+  color: #787774;
   font-size: 16px;
 }
 
 .search-card {
+  border: none;
+  background: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  margin-bottom: 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .custom-tabs :deep(.el-tabs__nav) {
   width: 100%;
   display: flex;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 .custom-tabs :deep(.el-tabs__item) {
   flex: 1;
   text-align: center;
-  font-size: 16px;
+  font-size: 14px;
+  padding: 16px 0;
+  color: #787774;
+  transition: all 0.2s;
+}
+
+.custom-tabs :deep(.el-tabs__item.is-active) {
+  color: #2eaadc;
+  font-weight: 500;
+}
+
+.custom-tabs :deep(.el-tabs__active-bar) {
+  height: 2px;
+  background-color: #2eaadc;
 }
 
 .search-container {
   display: flex;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin: 24px 0;
 }
 
 .search-input {
   flex: 1;
-  margin-right: 10px;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px #e5e5e5;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.search-input :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #2eaadc;
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px #2eaadc;
 }
 
 .domain-form {
-  margin-bottom: 20px;
+  margin: 24px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.domain-form :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.domain-form :deep(.el-form-item__label) {
+  color: #37352f;
+  font-weight: 500;
+}
+
+.advanced-options {
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-icon {
+  color: #787774;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.info-icon:hover {
+  color: #37352f;
+}
+
+.loading-state {
+  margin: 24px 0;
+}
+
+.loading-card {
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.loading-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2eaadc;
+  font-weight: 500;
+}
+
+.loading-tip {
+  margin-top: 16px;
+  color: #787774;
+  font-size: 14px;
+}
+
+.search-stats {
+  margin: 24px 0;
+}
+
+.search-stats :deep(.el-alert) {
+  border: none;
+  background-color: #e8f6fa;
+  border-radius: 8px;
+}
+
+.search-stats :deep(.el-alert__title) {
+  color: #2eaadc;
+  font-weight: 500;
 }
 
 .developer-list {
-  margin-top: 20px;
+  margin-top: 24px;
+  display: grid;
+  gap: 16px;
 }
 
 .pagination {
-  margin-top: 20px;
-  text-align: center;
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
 }
 
 /* 动画效果 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.5s ease;
+  transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,
@@ -338,56 +456,30 @@ export default {
 
 .list-enter-active,
 .list-leave-active {
-  transition: all 0.5s ease;
+  transition: all 0.3s ease;
 }
 
 .list-enter-from,
 .list-leave-to {
   opacity: 0;
-  transform: translateY(30px);
+  transform: translateY(20px);
 }
 
-/* 添加加载状态相关样式 */
-.loading-state {
-  margin: 20px 0;
-}
-
-.loading-card {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.loading-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #409EFF;
-}
-
-.loading-icon {
-  animation: rotate 1s linear infinite;
-}
-
-.loading-tip {
-  margin-top: 10px;
-  color: #909399;
-  font-size: 14px;
-  text-align: center;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
+@media (max-width: 768px) {
+  .developer-search {
+    padding: 24px 16px;
   }
-  to {
-    transform: rotate(360deg);
-  }
-}
 
-/* 添加搜索统计样式 */
-.search-stats {
-  margin: 20px 0;
-  max-width: 600px;
-  margin: 20px auto;
+  .header h1 {
+    font-size: 28px;
+  }
+
+  .search-container {
+    flex-direction: column;
+  }
+
+  .domain-form {
+    flex-direction: column;
+  }
 }
 </style> 

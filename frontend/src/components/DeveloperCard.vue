@@ -31,7 +31,7 @@
         </div>
         <div class="stat-item">
           <div class="stat-value">{{ formatScore(developer.talent_rank_score) }}</div>
-          <div class="stat-label">TalentRank评分</div>
+          <div class="stat-label">最终评分</div>
         </div>
       </div>
 
@@ -41,7 +41,7 @@
         <el-descriptions :column="1" border>
           <el-descriptions-item label="国家">
             <el-tag size="small" v-if="developer.profile.国家">{{ developer.profile.国家 }}</el-tag>
-            <span v-else>未知</span>
+            <span v-else>当前位置未公开，我们可以预测看看🤔</span>
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -144,19 +144,46 @@
       <div class="section">
         <div class="section-header">
           <h4>技术能力总结</h4>
-          <el-tag type="primary" v-if="developer.skill_summary">{{ developer.model || 'AI' }}生成</el-tag>
-          <el-button v-else type="link" size="small" @click="generateSkillSummary" :loading="loadingSkills">
-            生成总结
-          </el-button>
+          <div class="section-actions">
+            <el-tag type="primary" v-if="developer.skill_summary" class="model-tag">
+              {{ developer.model || 'AI' }}生成
+            </el-tag>
+            <el-button 
+              v-else 
+              type="primary" 
+              size="small" 
+              @click="generateSkillSummary" 
+              :loading="loadingSkills"
+              class="generate-btn"
+            >
+              <el-icon><Magic /></el-icon>
+              生成总结
+            </el-button>
+          </div>
         </div>
+        
         <div v-if="developer.skill_summary" class="skill-summary">
-          <div v-html="formattedSkillSummary"></div>
+          <div class="skill-content" v-html="formattedSkillSummary"></div>
+          <div v-if="isStreaming" class="streaming-indicator">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
         </div>
+        
         <div v-else-if="loadingSkills" class="skill-summary-loading">
           <el-skeleton :rows="6" animated />
         </div>
+        
         <div v-else class="skill-summary-empty">
-          <el-empty description="点击上方按钮生成开发者技术能力总结" :image-size="100"></el-empty>
+          <el-empty 
+            description="点击上方按钮生成开发者技术能力总结" 
+            :image-size="100"
+          >
+            <template #image>
+              <el-icon class="empty-icon"><Document /></el-icon>
+            </template>
+          </el-empty>
         </div>
       </div>
     </div>
@@ -169,11 +196,14 @@ import axios from 'axios'
 import { markdownToHtml } from '../utils/markdown'
 import { getDeveloperSkills } from '../api/github'
 import { ElMessage } from 'element-plus'
+import { Magic, Document } from '@element-plus/icons-vue'
 
 export default {
   name: 'DeveloperCard',
   components: {
-    DomainChart
+    DomainChart,
+    Magic,
+    Document
   },
   props: {
     developer: {
@@ -184,7 +214,10 @@ export default {
   data() {
     return {
       showDetails: false,
-      loadingSkills: false
+      loadingSkills: false,
+      isStreaming: false,
+      streamingText: '',
+      currentIndex: 0
     }
   },
   computed: {
@@ -286,13 +319,16 @@ export default {
       
       const username = this.developer.profile.用户名;
       this.loadingSkills = true;
+      this.isStreaming = true;
+      this.streamingText = '';
+      this.currentIndex = 0;
       
       try {
         const response = await getDeveloperSkills(username);
         if (response.data && response.data.skill_summary) {
-          // 更新开发者对象的技术能力总结和模型名称
-          this.developer.skill_summary = response.data.skill_summary;
           this.developer.model = response.data.model || 'AI';
+          await this.streamText(response.data.skill_summary);
+          this.developer.skill_summary = response.data.skill_summary;
           ElMessage.success('技术能力总结生成成功');
         } else {
           ElMessage.warning('生成总结时出现问题，请稍后再试');
@@ -302,6 +338,15 @@ export default {
         ElMessage.error('生成总结失败: ' + (error.response?.data?.message || error.message));
       } finally {
         this.loadingSkills = false;
+        this.isStreaming = false;
+      }
+    },
+    
+    async streamText(text) {
+      const words = text.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        this.streamingText += words[i] + ' ';
+        await new Promise(resolve => setTimeout(resolve, 50)); // 控制打字速度
       }
     }
   }
@@ -310,87 +355,182 @@ export default {
 
 <style scoped>
 .developer-card {
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
+  border: none;
+  background: #ffffff;
   border-radius: 8px;
-  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
 }
 
 .developer-card:hover {
-  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 16px;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 .user-info {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 .avatar {
-  margin-right: 15px;
-  border: 2px solid #409EFF;
+  border: 2px solid #e5e5e5;
+  transition: all 0.2s;
+}
+
+.avatar:hover {
+  border-color: #2eaadc;
 }
 
 .user-details h3 {
-  margin: 0 0 5px 0;
-  font-size: 18px;
-  color: #303133;
+  color: #37352f;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 
 .user-details p {
-  margin: 0;
-  color: #606266;
+  color: #787774;
   font-size: 14px;
 }
 
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions .el-button {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
 .card-content {
-  padding: 10px 0;
+  padding: 16px;
 }
 
 .stats-row {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .stat-item {
   text-align: center;
-  padding: 0 15px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.stat-item:hover {
+  background: #e8f6fa;
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #409EFF;
+  color: #2eaadc;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #606266;
-  margin-top: 5px;
+  color: #787774;
+  font-size: 13px;
+}
+
+.info-section {
+  margin-top: 16px;
+}
+
+.info-section :deep(.el-descriptions) {
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.info-section :deep(.el-descriptions__label) {
+  color: #37352f;
+  font-weight: 500;
+}
+
+.info-section :deep(.el-descriptions__content) {
+  color: #787774;
 }
 
 .section {
-  margin-top: 25px;
+  margin-top: 24px;
 }
 
 .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .section-header h4 {
-  margin: 0;
+  color: #37352f;
   font-size: 16px;
-  color: #303133;
+  font-weight: 600;
+}
+
+.prediction-details {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.evidence-item {
+  margin-bottom: 8px;
+}
+
+.evidence-item:last-child {
+  margin-bottom: 0;
+}
+
+.country-code {
+  display: block;
+  color: #37352f;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+:deep(.el-progress-bar__outer) {
+  background-color: #e5e5e5;
+  border-radius: 2px;
+}
+
+:deep(.el-progress-bar__inner) {
+  background-color: #2eaadc;
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .star-count, .fork-count {
@@ -399,147 +539,131 @@ export default {
   justify-content: center;
 }
 
-.info-section {
-  margin: 20px 0;
-}
-
-:deep(.el-descriptions__label) {
-  width: 80px;
-}
-
-.prediction-details {
-  margin-top: 10px;
-}
-
-.evidence-item {
-  margin-bottom: 8px;
+.section-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-.country-code {
-  width: 80px;
-  font-weight: bold;
-  margin-right: 10px;
+.model-tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
-:deep(.el-progress) {
-  flex: 1;
+.generate-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
 }
 
 .skill-summary {
-  margin-top: 15px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  line-height: 1.6;
+  position: relative;
+  margin-top: 16px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
 }
 
-.skill-summary h3 {
+.skill-content {
+  line-height: 1.8;
+  color: #37352f;
+}
+
+.skill-content :deep(h3) {
+  color: #2eaadc;
   font-size: 16px;
-  color: #409EFF;
-  margin-top: 15px;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin: 20px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e5e5;
 }
 
-.skill-summary h4 {
+.skill-content :deep(h4) {
+  color: #37352f;
   font-size: 14px;
-  color: #303133;
-  margin-top: 12px;
-  margin-bottom: 6px;
+  font-weight: 500;
+  margin: 16px 0 8px;
 }
 
-.skill-summary ul {
+.skill-content :deep(ul) {
   padding-left: 20px;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
-.skill-summary li {
-  margin-bottom: 5px;
+.skill-content :deep(li) {
+  margin-bottom: 6px;
+  color: #787774;
 }
 
-.skill-summary p {
-  margin: 10px 0;
+.skill-content :deep(p) {
+  margin: 8px 0;
+  color: #787774;
 }
 
-.skill-summary-empty {
-  padding: 30px 0;
-  text-align: center;
+.skill-content :deep(code) {
+  background: #e8f6fa;
+  color: #2eaadc;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.streaming-indicator {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #2eaadc;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
 .skill-summary-loading {
-  padding: 15px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
 }
 
-.dev-skill-summary {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+.skill-summary-empty {
+  padding: 40px 20px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
 }
 
-.skill-section {
-  margin-bottom: 20px;
-  padding: 10px 15px;
-  border-left: 3px solid #409EFF;
-  background-color: rgba(64, 158, 255, 0.05);
-  border-radius: 0 4px 4px 0;
+.empty-icon {
+  font-size: 48px;
+  color: #2eaadc;
+  margin-bottom: 16px;
 }
 
-.skill-section h3 {
-  color: #409EFF;
-  font-size: 16px;
-  margin-top: 0;
-  margin-bottom: 12px;
-}
-
-.tech-stack {
-  border-left-color: #409EFF;
-}
-
-.domains {
-  border-left-color: #67C23A;
-}
-
-.projects {
-  border-left-color: #E6A23C;
-}
-
-.growth {
-  border-left-color: #F56C6C;
-}
-
-.collaboration {
-  border-left-color: #909399;
-}
-
-.tech-highlight {
-  background-color: rgba(64, 158, 255, 0.15);
-  color: #409EFF;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-weight: 500;
-}
-
-.skill-rating {
-  display: flex;
-  align-items: center;
-  margin: 5px 0;
-}
-
-.rating-label {
-  min-width: 70px;
-  font-weight: 500;
-  margin-right: 8px;
-}
-
-.rating-stars {
-  color: #F56C6C;
-  letter-spacing: 2px;
-}
-
-code {
-  background-color: #f4f4f4;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.9em;
+@media (max-width: 768px) {
+  .skill-summary {
+    padding: 16px;
+  }
+  
+  .streaming-indicator {
+    bottom: 16px;
+    right: 16px;
+  }
 }
 </style> 
