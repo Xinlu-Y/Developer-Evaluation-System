@@ -156,7 +156,7 @@
               :loading="loadingSkills"
               class="generate-btn"
             >
-              <el-icon><Magic /></el-icon>
+              <el-icon><Cpu /></el-icon>
               生成总结
             </el-button>
           </div>
@@ -191,18 +191,19 @@
 </template>
 
 <script>
+import { ref, onMounted, watch, computed } from 'vue'
 import DomainChart from './DomainChart.vue'
 import axios from 'axios'
 import { markdownToHtml } from '../utils/markdown'
 import { getDeveloperSkills } from '../api/github'
 import { ElMessage } from 'element-plus'
-import { Magic, Document } from '@element-plus/icons-vue'
+import { Cpu, Document } from '@element-plus/icons-vue'
 
 export default {
   name: 'DeveloperCard',
   components: {
     DomainChart,
-    Magic,
+    Cpu,
     Document
   },
   props: {
@@ -269,12 +270,10 @@ export default {
       return levelMap[level] || level;
     },
     getPercentage(score) {
-      // 将分数转换为百分比，最高分为100%
       const maxScore = Math.max(...Object.values(this.developer.country_prediction.country_scores));
       return (score / maxScore) * 100;
     },
     getColorByScore(score) {
-      // 根据分数返回不同的颜色
       const maxScore = Math.max(...Object.values(this.developer.country_prediction.country_scores));
       const ratio = score / maxScore;
       if (ratio > 0.8) return '#67C23A';
@@ -282,7 +281,6 @@ export default {
       return '#909399';
     },
     getCountryName(countryCode) {
-      // 国家代码到国家名称的映射
       const countryMap = {
         'CN': '中国',
         'US': '美国',
@@ -310,9 +308,8 @@ export default {
       };
       return countryMap[countryCode] || `未知(${countryCode})`;
     },
-    // 生成技术能力总结
     async generateSkillSummary() {
-      if (!this.developer || !this.developer.profile || !this.developer.profile.用户名) {
+      if (!this.developer?.profile?.用户名) {
         ElMessage.error('无法获取开发者信息');
         return;
       }
@@ -321,21 +318,28 @@ export default {
       this.loadingSkills = true;
       this.isStreaming = true;
       this.streamingText = '';
-      this.currentIndex = 0;
       
       try {
         const response = await getDeveloperSkills(username);
-        if (response.data && response.data.skill_summary) {
+        if (response?.data?.skill_summary) {
           this.developer.model = response.data.model || 'AI';
           await this.streamText(response.data.skill_summary);
           this.developer.skill_summary = response.data.skill_summary;
-          ElMessage.success('技术能力总结生成成功');
+          ElMessage({
+            message: '技术能力总结生成成功',
+            type: 'success',
+            duration: 3000
+          });
         } else {
-          ElMessage.warning('生成总结时出现问题，请稍后再试');
+          throw new Error('生成总结数据格式错误');
         }
       } catch (error) {
         console.error('生成技术能力总结失败:', error);
-        ElMessage.error('生成总结失败: ' + (error.response?.data?.message || error.message));
+        ElMessage({
+          message: error.response?.data?.message || error.message || '生成总结失败，请稍后重试',
+          type: 'error',
+          duration: 5000
+        });
       } finally {
         this.loadingSkills = false;
         this.isStreaming = false;
@@ -343,12 +347,33 @@ export default {
     },
     
     async streamText(text) {
-      const words = text.split(' ');
-      for (let i = 0; i < words.length; i++) {
-        this.streamingText += words[i] + ' ';
-        await new Promise(resolve => setTimeout(resolve, 50)); // 控制打字速度
-      }
+      return new Promise((resolve) => {
+        const words = text.split(' ');
+        let currentIndex = 0;
+        
+        const animate = () => {
+          const chunk = 3; // 每次处理3个词
+          for (let i = 0; i < chunk && currentIndex < words.length; i++) {
+            this.streamingText += words[currentIndex] + ' ';
+            currentIndex++;
+          }
+          
+          if (currentIndex < words.length) {
+            requestAnimationFrame(animate);
+          } else {
+            resolve();
+          }
+        };
+        
+        requestAnimationFrame(animate);
+      });
     }
+  },
+  
+  beforeUnmount() {
+    // 清理未完成的异步操作
+    this.loadingSkills = false;
+    this.isStreaming = false;
   }
 }
 </script>
@@ -357,105 +382,111 @@ export default {
 .developer-card {
   border: none;
   background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+  margin-bottom: 32px;
 }
 
 .developer-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: 24px 32px;
   border-bottom: 1px solid #e5e5e5;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .avatar {
+  width: 64px !important;
+  height: 64px !important;
   border: 2px solid #e5e5e5;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .avatar:hover {
   border-color: #2eaadc;
+  transform: scale(1.05);
 }
 
 .user-details h3 {
   color: #37352f;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .user-details p {
   color: #787774;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .actions .el-button {
-  padding: 6px 12px;
-  font-size: 13px;
-  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 15px;
+  border-radius: 8px;
+  height: 40px;
 }
 
 .card-content {
-  padding: 16px;
+  padding: 32px;
 }
 
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 24px;
+  margin-bottom: 32px;
 }
 
 .stat-item {
   text-align: center;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  transition: all 0.2s;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: all 0.3s;
 }
 
 .stat-item:hover {
   background: #e8f6fa;
+  transform: translateY(-2px);
 }
 
 .stat-value {
   color: #2eaadc;
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .stat-label {
   color: #787774;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .info-section {
-  margin-top: 16px;
+  margin-top: 32px;
 }
 
 .info-section :deep(.el-descriptions) {
-  padding: 16px;
-  background: #f5f5f5;
-  border-radius: 6px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 12px;
 }
 
 .info-section :deep(.el-descriptions__label) {
@@ -468,42 +499,40 @@ export default {
 }
 
 .section {
-  margin-top: 24px;
+  margin-top: 32px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
 }
 
 .section-header h4 {
   color: #37352f;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
 }
 
 .prediction-details {
-  margin-top: 12px;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 6px;
+  margin-top: 16px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
 }
 
 .evidence-item {
-  margin-bottom: 8px;
-}
-
-.evidence-item:last-child {
-  margin-bottom: 0;
+  margin-bottom: 12px;
+  padding: 8px;
 }
 
 .country-code {
   display: block;
   color: #37352f;
-  font-size: 13px;
-  margin-bottom: 4px;
+  font-size: 15px;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 :deep(.el-progress-bar__outer) {
@@ -514,23 +543,6 @@ export default {
 :deep(.el-progress-bar__inner) {
   background-color: #2eaadc;
   border-radius: 2px;
-}
-
-@media (max-width: 768px) {
-  .stats-row {
-    grid-template-columns: 1fr;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
 }
 
 .star-count, .fork-count {
@@ -560,47 +572,50 @@ export default {
 
 .skill-summary {
   position: relative;
-  margin-top: 16px;
-  padding: 20px;
+  margin-top: 24px;
+  padding: 32px;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e5e5e5;
 }
 
 .skill-content {
   line-height: 1.8;
   color: #37352f;
+  font-size: 15px;
 }
 
 .skill-content :deep(h3) {
   color: #2eaadc;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  margin: 20px 0 12px;
-  padding-bottom: 8px;
+  margin: 24px 0 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #e5e5e5;
 }
 
 .skill-content :deep(h4) {
   color: #37352f;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
-  margin: 16px 0 8px;
+  margin: 20px 0 12px;
 }
 
 .skill-content :deep(ul) {
-  padding-left: 20px;
-  margin: 8px 0;
+  padding-left: 24px;
+  margin: 12px 0;
 }
 
 .skill-content :deep(li) {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: #787774;
+  line-height: 1.6;
 }
 
 .skill-content :deep(p) {
-  margin: 8px 0;
+  margin: 12px 0;
   color: #787774;
+  line-height: 1.6;
 }
 
 .skill-content :deep(code) {
@@ -613,15 +628,15 @@ export default {
 
 .streaming-indicator {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   background: #2eaadc;
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out;
@@ -636,34 +651,55 @@ export default {
 }
 
 .skill-summary-loading {
-  padding: 20px;
+  padding: 32px;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e5e5e5;
 }
 
 .skill-summary-empty {
-  padding: 40px 20px;
+  padding: 48px 32px;
   text-align: center;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e5e5e5;
 }
 
 .empty-icon {
-  font-size: 48px;
+  font-size: 64px;
   color: #2eaadc;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 @media (max-width: 768px) {
-  .skill-summary {
+  .card-header {
+    padding: 20px;
+  }
+
+  .card-content {
+    padding: 20px;
+  }
+
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .stat-item {
     padding: 16px;
   }
-  
-  .streaming-indicator {
-    bottom: 16px;
-    right: 16px;
+
+  .skill-summary {
+    padding: 20px;
+  }
+
+  .skill-summary-empty {
+    padding: 32px 20px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
   }
 }
 </style> 

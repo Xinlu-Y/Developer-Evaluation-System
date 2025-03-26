@@ -280,34 +280,42 @@ export default {
 
 <style scoped>
 .developer-search {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 64px 40px;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 64px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .header h1 {
   color: #37352f;
-  font-size: 32px;
+  font-size: 48px;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
   letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .header p {
   color: #787774;
-  font-size: 16px;
+  font-size: 20px;
+  line-height: 1.6;
 }
 
 .search-card {
   border: none;
   background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: 32px;
 }
 
 .custom-tabs :deep(.el-tabs__nav) {
@@ -319,26 +327,28 @@ export default {
 .custom-tabs :deep(.el-tabs__item) {
   flex: 1;
   text-align: center;
-  font-size: 14px;
-  padding: 16px 0;
+  font-size: 18px;
+  padding: 24px 0;
   color: #787774;
   transition: all 0.2s;
 }
 
 .custom-tabs :deep(.el-tabs__item.is-active) {
   color: #2eaadc;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .custom-tabs :deep(.el-tabs__active-bar) {
-  height: 2px;
+  height: 3px;
   background-color: #2eaadc;
 }
 
 .search-container {
   display: flex;
-  gap: 12px;
-  margin: 24px 0;
+  gap: 20px;
+  margin: 48px auto;
+  max-width: 800px;
+  padding: 0 32px;
 }
 
 .search-input {
@@ -347,8 +357,14 @@ export default {
 
 .search-input :deep(.el-input__wrapper) {
   box-shadow: 0 0 0 1px #e5e5e5;
-  border-radius: 4px;
+  border-radius: 12px;
   transition: all 0.2s;
+  padding: 8px 20px;
+  height: 56px;
+}
+
+.search-input :deep(.el-input__inner) {
+  font-size: 18px;
 }
 
 .search-input :deep(.el-input__wrapper:hover) {
@@ -356,36 +372,68 @@ export default {
 }
 
 .search-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #2eaadc;
+  box-shadow: 0 0 0 2px #2eaadc;
+}
+
+.search-container .el-button {
+  height: 56px;
+  padding: 0 32px;
+  font-size: 18px;
+  border-radius: 12px;
+  min-width: 120px;
 }
 
 .domain-form {
-  margin: 24px 0;
+  margin: 48px auto;
+  max-width: 900px;
+  padding: 0 32px;
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 24px;
 }
 
 .domain-form :deep(.el-form-item) {
   margin-bottom: 0;
+  flex: 1;
+  min-width: 280px;
 }
 
 .domain-form :deep(.el-form-item__label) {
   color: #37352f;
   font-weight: 500;
+  font-size: 16px;
+  padding-bottom: 12px;
+}
+
+.domain-form :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px #e5e5e5;
+  border-radius: 12px;
+  transition: all 0.2s;
+  height: 48px;
+}
+
+.domain-form :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #2eaadc;
+}
+
+.domain-form :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 2px #2eaadc;
 }
 
 .advanced-options {
-  margin: 16px 0;
+  margin: 32px auto;
+  max-width: 900px;
+  padding: 0 32px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 
 .info-icon {
   color: #787774;
   cursor: pointer;
   transition: color 0.2s;
+  font-size: 18px;
 }
 
 .info-icon:hover {
@@ -393,52 +441,63 @@ export default {
 }
 
 .loading-state {
-  margin: 24px 0;
+  margin: 48px auto;
+  max-width: 900px;
+  padding: 0 32px;
 }
 
 .loading-card {
   border: none;
-  background: #f5f5f5;
-  border-radius: 8px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 32px;
 }
 
 .loading-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   color: #2eaadc;
   font-weight: 500;
+  font-size: 18px;
 }
 
 .loading-tip {
-  margin-top: 16px;
+  margin-top: 24px;
   color: #787774;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .search-stats {
-  margin: 24px 0;
+  margin: 48px auto;
+  max-width: 900px;
+  padding: 0 32px;
 }
 
 .search-stats :deep(.el-alert) {
   border: none;
   background-color: #e8f6fa;
-  border-radius: 8px;
+  border-radius: 16px;
+  padding: 24px 32px;
 }
 
 .search-stats :deep(.el-alert__title) {
   color: #2eaadc;
   font-weight: 500;
+  font-size: 16px;
 }
 
 .developer-list {
-  margin-top: 24px;
+  margin: 48px auto;
+  max-width: 1200px;
+  padding: 0 32px;
   display: grid;
-  gap: 16px;
+  gap: 32px;
 }
 
 .pagination {
-  margin-top: 32px;
+  margin: 48px auto;
+  padding: 0 32px;
   display: flex;
   justify-content: center;
 }
@@ -467,19 +526,58 @@ export default {
 
 @media (max-width: 768px) {
   .developer-search {
-    padding: 24px 16px;
+    padding: 40px 20px;
+  }
+
+  .header {
+    margin-bottom: 40px;
   }
 
   .header h1 {
-    font-size: 28px;
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+
+  .header p {
+    font-size: 18px;
+  }
+
+  .search-card {
+    padding: 20px;
   }
 
   .search-container {
     flex-direction: column;
+    padding: 0 20px;
+    margin: 32px auto;
+  }
+
+  .search-input :deep(.el-input__wrapper) {
+    height: 48px;
+  }
+
+  .search-container .el-button {
+    height: 48px;
+    width: 100%;
   }
 
   .domain-form {
     flex-direction: column;
+    padding: 0 20px;
+    margin: 32px auto;
+  }
+
+  .domain-form :deep(.el-form-item) {
+    width: 100%;
+  }
+
+  .advanced-options {
+    padding: 0 20px;
+  }
+
+  .developer-list {
+    padding: 0 20px;
+    gap: 24px;
   }
 }
 </style> 
