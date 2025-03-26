@@ -283,6 +283,7 @@ export default {
   max-width: 1400px;
   margin: 0 auto;
   padding: 64px 40px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .header {
@@ -294,7 +295,7 @@ export default {
 }
 
 .header h1 {
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-size: 48px;
   font-weight: 700;
   margin-bottom: 24px;
@@ -303,7 +304,7 @@ export default {
 }
 
 .header p {
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   font-size: 20px;
   line-height: 1.6;
 }
@@ -311,8 +312,8 @@ export default {
 .search-card {
   border: none;
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px;
   margin: 0 auto;
   max-width: 1200px;
   padding: 32px;
@@ -321,7 +322,7 @@ export default {
 .custom-tabs :deep(.el-tabs__nav) {
   width: 100%;
   display: flex;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 .custom-tabs :deep(.el-tabs__item) {
@@ -329,18 +330,18 @@ export default {
   text-align: center;
   font-size: 18px;
   padding: 24px 0;
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   transition: all 0.2s;
 }
 
 .custom-tabs :deep(.el-tabs__item.is-active) {
-  color: #2eaadc;
+  color: rgb(55, 53, 47);
   font-weight: 600;
 }
 
 .custom-tabs :deep(.el-tabs__active-bar) {
   height: 3px;
-  background-color: #2eaadc;
+  background-color: rgb(55, 53, 47);
 }
 
 .search-container {
@@ -356,8 +357,8 @@ export default {
 }
 
 .search-input :deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px #e5e5e5;
-  border-radius: 12px;
+  box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px;
+  border-radius: 8px;
   transition: all 0.2s;
   padding: 8px 20px;
   height: 56px;
@@ -368,19 +369,26 @@ export default {
 }
 
 .search-input :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #2eaadc;
+  box-shadow: rgba(15, 15, 15, 0.15) 0px 0px 0px 1px;
 }
 
 .search-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px #2eaadc;
+  box-shadow: rgba(15, 15, 15, 0.25) 0px 0px 0px 1px;
 }
 
 .search-container .el-button {
   height: 56px;
   padding: 0 32px;
   font-size: 18px;
-  border-radius: 12px;
+  border-radius: 8px;
   min-width: 120px;
+  background-color: rgb(55, 53, 47);
+  border-color: rgb(55, 53, 47);
+}
+
+.search-container .el-button:hover {
+  background-color: rgba(55, 53, 47, 0.85);
+  border-color: rgba(55, 53, 47, 0.85);
 }
 
 .domain-form {
@@ -399,25 +407,25 @@ export default {
 }
 
 .domain-form :deep(.el-form-item__label) {
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-weight: 500;
   font-size: 16px;
   padding-bottom: 12px;
 }
 
 .domain-form :deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px #e5e5e5;
-  border-radius: 12px;
+  box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px;
+  border-radius: 8px;
   transition: all 0.2s;
   height: 48px;
 }
 
 .domain-form :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #2eaadc;
+  box-shadow: rgba(15, 15, 15, 0.15) 0px 0px 0px 1px;
 }
 
 .domain-form :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px #2eaadc;
+  box-shadow: rgba(15, 15, 15, 0.25) 0px 0px 0px 1px;
 }
 
 .advanced-options {
@@ -430,14 +438,14 @@ export default {
 }
 
 .info-icon {
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   cursor: pointer;
   transition: color 0.2s;
   font-size: 18px;
 }
 
 .info-icon:hover {
-  color: #37352f;
+  color: rgb(55, 53, 47);
 }
 
 .loading-state {
@@ -448,8 +456,8 @@ export default {
 
 .loading-card {
   border: none;
-  background: #f8f9fa;
-  border-radius: 16px;
+  background: rgba(55, 53, 47, 0.03);
+  border-radius: 8px;
   padding: 32px;
 }
 
@@ -457,14 +465,14 @@ export default {
   display: flex;
   align-items: center;
   gap: 16px;
-  color: #2eaadc;
+  color: rgb(55, 53, 47);
   font-weight: 500;
   font-size: 18px;
 }
 
 .loading-tip {
   margin-top: 24px;
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   font-size: 16px;
 }
 
@@ -476,13 +484,13 @@ export default {
 
 .search-stats :deep(.el-alert) {
   border: none;
-  background-color: #e8f6fa;
-  border-radius: 16px;
+  background-color: rgba(55, 53, 47, 0.03);
+  border-radius: 8px;
   padding: 24px 32px;
 }
 
 .search-stats :deep(.el-alert__title) {
-  color: #2eaadc;
+  color: rgb(55, 53, 47);
   font-weight: 500;
   font-size: 16px;
 }

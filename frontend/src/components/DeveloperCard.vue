@@ -382,15 +382,16 @@ export default {
 .developer-card {
   border: none;
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px;
   transition: all 0.3s;
   margin-bottom: 32px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .developer-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  transform: translateY(-4px);
+  box-shadow: rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.2) 0px 3px 6px;
+  transform: translateY(-2px);
 }
 
 .card-header {
@@ -398,7 +399,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 24px 32px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 .user-info {
@@ -410,24 +411,23 @@ export default {
 .avatar {
   width: 64px !important;
   height: 64px !important;
-  border: 2px solid #e5e5e5;
+  border: 1px solid rgba(55, 53, 47, 0.16);
   transition: all 0.3s;
 }
 
 .avatar:hover {
-  border-color: #2eaadc;
-  transform: scale(1.05);
+  border-color: rgb(55, 53, 47);
 }
 
 .user-details h3 {
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 8px;
 }
 
 .user-details p {
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   font-size: 16px;
 }
 
@@ -437,10 +437,18 @@ export default {
 }
 
 .actions .el-button {
+  background-color: rgb(55, 53, 47);
+  border-color: rgb(55, 53, 47);
+  color: #ffffff;
   padding: 8px 16px;
   font-size: 15px;
   border-radius: 8px;
   height: 40px;
+}
+
+.actions .el-button:hover {
+  background-color: rgba(55, 53, 47, 0.85);
+  border-color: rgba(55, 53, 47, 0.85);
 }
 
 .card-content {
@@ -457,25 +465,24 @@ export default {
 .stat-item {
   text-align: center;
   padding: 24px;
-  background: #f8f9fa;
+  background: rgba(55, 53, 47, 0.03);
   border-radius: 12px;
   transition: all 0.3s;
 }
 
 .stat-item:hover {
-  background: #e8f6fa;
-  transform: translateY(-2px);
+  background: rgba(55, 53, 47, 0.08);
 }
 
 .stat-value {
-  color: #2eaadc;
+  color: rgb(55, 53, 47);
   font-size: 28px;
   font-weight: 600;
   margin-bottom: 8px;
 }
 
 .stat-label {
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   font-size: 15px;
 }
 
@@ -485,17 +492,17 @@ export default {
 
 .info-section :deep(.el-descriptions) {
   padding: 24px;
-  background: #f8f9fa;
+  background: rgba(55, 53, 47, 0.03);
   border-radius: 12px;
 }
 
 .info-section :deep(.el-descriptions__label) {
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-weight: 500;
 }
 
 .info-section :deep(.el-descriptions__content) {
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
 }
 
 .section {
@@ -510,7 +517,7 @@ export default {
 }
 
 .section-header h4 {
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-size: 18px;
   font-weight: 600;
 }
@@ -518,7 +525,7 @@ export default {
 .prediction-details {
   margin-top: 16px;
   padding: 20px;
-  background: #f8f9fa;
+  background: rgba(55, 53, 47, 0.03);
   border-radius: 12px;
 }
 
@@ -529,19 +536,19 @@ export default {
 
 .country-code {
   display: block;
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-size: 15px;
   margin-bottom: 8px;
   font-weight: 500;
 }
 
 :deep(.el-progress-bar__outer) {
-  background-color: #e5e5e5;
+  background-color: rgba(55, 53, 47, 0.1);
   border-radius: 2px;
 }
 
 :deep(.el-progress-bar__inner) {
-  background-color: #2eaadc;
+  background-color: rgb(55, 53, 47);
   border-radius: 2px;
 }
 
@@ -558,44 +565,55 @@ export default {
 }
 
 .model-tag {
+  background-color: rgba(55, 53, 47, 0.08);
+  color: rgb(55, 53, 47);
+  border: none;
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 12px;
 }
 
 .generate-btn {
+  background-color: rgb(55, 53, 47);
+  border-color: rgb(55, 53, 47);
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
 }
 
+.generate-btn:hover {
+  background-color: rgba(55, 53, 47, 0.85);
+  border-color: rgba(55, 53, 47, 0.85);
+}
+
 .skill-summary {
   position: relative;
   margin-top: 24px;
   padding: 32px;
-  background: #f8f9fa;
+  background: rgba(55, 53, 47, 0.03);
   border-radius: 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 .skill-content {
   line-height: 1.8;
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-size: 15px;
 }
 
 .skill-content :deep(h3) {
-  color: #2eaadc;
+  color: rgb(55, 53, 47);
   font-size: 18px;
   font-weight: 600;
   margin: 24px 0 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 .skill-content :deep(h4) {
-  color: #37352f;
+  color: rgb(55, 53, 47);
   font-size: 16px;
   font-weight: 500;
   margin: 20px 0 12px;
@@ -608,19 +626,19 @@ export default {
 
 .skill-content :deep(li) {
   margin-bottom: 8px;
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   line-height: 1.6;
 }
 
 .skill-content :deep(p) {
   margin: 12px 0;
-  color: #787774;
+  color: rgba(55, 53, 47, 0.65);
   line-height: 1.6;
 }
 
 .skill-content :deep(code) {
-  background: #e8f6fa;
-  color: #2eaadc;
+  background: rgba(55, 53, 47, 0.08);
+  color: rgb(55, 53, 47);
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 13px;
@@ -637,7 +655,7 @@ export default {
 .dot {
   width: 8px;
   height: 8px;
-  background: #2eaadc;
+  background: rgb(55, 53, 47);
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out;
 }
@@ -652,22 +670,22 @@ export default {
 
 .skill-summary-loading {
   padding: 32px;
-  background: #f8f9fa;
+  background: rgba(55, 53, 47, 0.03);
   border-radius: 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 .skill-summary-empty {
   padding: 48px 32px;
   text-align: center;
-  background: #f8f9fa;
+  background: rgba(55, 53, 47, 0.03);
   border-radius: 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid rgba(55, 53, 47, 0.16);
 }
 
 .empty-icon {
   font-size: 64px;
-  color: #2eaadc;
+  color: rgb(55, 53, 47);
   margin-bottom: 24px;
 }
 
