@@ -3,7 +3,6 @@ import logging
 from geo_utils import geocode_location
 from language_culture import analyze_language_culture_hints
 from social_network import analyze_social_network
-from timezone_analysis import analyze_activity_patterns, analyze_commit_timezone
 from user_profile import get_user_profile
 
 
