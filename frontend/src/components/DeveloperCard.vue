@@ -73,7 +73,7 @@
             <div v-if="showDetails" class="prediction-details">
               <div v-for="(score, country) in developer.country_prediction.country_scores" :key="country" class="evidence-item">
                 <span class="country-code">{{ getCountryName(country) }}:</span>
-                <el-progress :percentage="getPercentage(score)" :color="getColorByScore(score)"></el-progress>
+                <el-progress :percentage="getPercentage(score)" :color="getColorByScore(score)" :format="(percentage) => `${percentage}%`"></el-progress>
               </div>
             </div>
           </el-descriptions-item>
@@ -241,7 +241,7 @@ export default {
       return score ? parseFloat(score).toFixed(2) : '0.00';
     },
     formatConfidence(confidence) {
-      return confidence ? (confidence * 100).toFixed(1) + '%' : '0%';
+      return confidence ? Math.round(confidence * 100) + '%' : '0%';
     },
     openGithub() {
       window.open(this.developer.profile['GitHub 个人主页'], '_blank');
@@ -270,8 +270,8 @@ export default {
       return levelMap[level] || level;
     },
     getPercentage(score) {
-      const maxScore = Math.max(...Object.values(this.developer.country_prediction.country_scores));
-      return (score / maxScore) * 100;
+      const totalScore = Object.values(this.developer.country_prediction.country_scores).reduce((sum, s) => sum + s, 0);
+      return Math.round((score / totalScore) * 100);
     },
     getColorByScore(score) {
       const maxScore = Math.max(...Object.values(this.developer.country_prediction.country_scores));
