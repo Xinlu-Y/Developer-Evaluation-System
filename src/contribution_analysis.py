@@ -51,6 +51,9 @@ def calculate_contribution_score(events):
 
 
 def evaluate_combined_influence(repo_star, repo_fork):
+    """
+    根据仓库的 star 数和 fork 数计算贡献项目的影响力
+    """
     influence_score = repo_star * 0.7 + repo_fork * 0.3
     if influence_score >= 1000:
         return 5
