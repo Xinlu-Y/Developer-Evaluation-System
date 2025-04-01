@@ -45,7 +45,17 @@ export default {
       'devops': 'DevOps',
       'gamedev': '游戏开发',
       'security': '安全',
-      'blockchain': '区块链'
+      'blockchain': '区块链',
+      'blockchain': '区块链',
+      'systems': '系统编程',
+      'graphics': '计算机图形学',
+      'computer-vision': '计算机视觉',
+      // 'education': '教育和学习',
+      'ai': '人工智能',
+      'robotics-iot': '机器人和物联网',
+      'bioinformatics': '生物信息学',
+      'networking': '网络和通信',
+      'audio': '音频工程'
     }
     
     // 渲染图表
