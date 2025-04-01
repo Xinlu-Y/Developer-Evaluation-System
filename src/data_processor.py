@@ -2,8 +2,8 @@ import os
 import re
 import json
 import logging
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import FAISS
 from config import CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_MODEL_NAME, DOWNLOAD_DIR
 

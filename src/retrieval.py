@@ -3,10 +3,9 @@ import logging
 import datetime
 import re
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain.chains import LLMChain
+from langchain_ollama import OllamaEmbeddings
+from langchain_core.prompts import PromptTemplate
 from langchain_ollama import ChatOllama
-from langchain.prompts import PromptTemplate
 from config import EMBEDDING_MODEL_NAME, MODEL_NAME, PROMPT, DOWNLOAD_DIR, SKILL_ANALYSIS_PROMPT, TOP_K_RESULTS
 
 logger = logging.getLogger(__name__)
@@ -83,13 +82,17 @@ def generate_skill_summary(username, search_results):
         input_variables=["username", "context"]
     )
     
-    # 创建LLM链
+    # 使用RunnableSequence方式
     llm = get_llm()
-    chain = LLMChain(llm=llm, prompt=prompt)
+    chain = prompt | llm
     
-    # The generate summary
+    # 生成摘要
     try:
-        raw_summary = chain.run(username=username, context=context)
+        raw_summary = chain.invoke({"username": username, "context": context})
+        
+        # 从ChatMessage或字符串中获取内容
+        if hasattr(raw_summary, 'content'):
+            raw_summary = raw_summary.content
         
         # 高效的去重处理
         # 1. 按段落拆分
@@ -136,13 +139,17 @@ def generate_search_queries(query):
             input_variables=["input_query", "date"]
         )
         
-        # 创建LLM链
+        # 使用RunnableSequence方式
         llm = get_llm()
-        chain = LLMChain(llm=llm, prompt=prompt)
+        chain = prompt | llm
         
         # 生成查询
-        result = chain.run(input_query=query, date=current_date)
+        result = chain.invoke({"input_query": query, "date": current_date})
         
+        # 从ChatMessage或字符串中获取内容
+        if hasattr(result, 'content'):
+            result = result.content
+            
         # 处理结果，拆分成多个查询
         queries = [q.strip() for q in result.strip().split("\n") if q.strip()]
         logger.info(f"为查询 '{query}' 生成了 {len(queries)} 个扩展查询")
