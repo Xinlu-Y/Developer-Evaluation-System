@@ -84,10 +84,16 @@
       <div v-if="hasDomainData" class="section">
         <div class="section-header">
           <h4>技术领域分析</h4>
-          <el-tag type="success">{{ Object.keys(developer.domains).length }}个领域</el-tag>
+          <el-tag type="success">{{ developer.domains.length }}个领域</el-tag>
         </div>
-        <domain-chart :domains="developer.domains" :no-data-message="'未能检测到技术领域'"></domain-chart>
+        <!-- <pre style="background:#f6f6f6; padding:1em; font-size:12px;">{{ JSON.stringify(developer.domains, null, 2) }}</pre> -->
+        <DomainChart
+          v-if="hasDomainData"
+          :domains="developer.domains"
+          no-data-message="未能检测到技术领域"
+        />
       </div>
+
 
       <!-- 个人项目 -->
       <div v-if="developer.repositories?.length" class="section">
@@ -228,7 +234,7 @@ export default {
              Object.keys(this.developer.country_prediction.country_scores).length > 0;
     },
     hasDomainData() {
-      return this.developer.domains && Object.keys(this.developer.domains).length > 0;
+      return Array.isArray(this.developer.domains) && this.developer.domains.length > 0;
     },
     formattedSkillSummary() {
       if (!this.developer.skill_summary) return '';
