@@ -2,7 +2,7 @@
   <div class="domain-chart">
     <div v-if="!hasData" class="empty">{{ noDataMessage }}</div>
     <div v-else ref="radarRef" class="chart-container"></div>
-    <div v-if="hasData" ref="sunburstRef" class="chart-container sunburst"></div>
+    <div v-if="hasData" ref="wordcloudRef" class="chart-container wordcloud"></div>
     <div v-if="hasData" ref="sankeyRef" class="chart-container sankey"></div>
   </div>
 </template>
@@ -10,7 +10,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts/core'
-import { RadarChart, SunburstChart, SankeyChart } from 'echarts/charts'
+import { RadarChart, SankeyChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
@@ -20,10 +20,10 @@ import {
 } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
 import { CanvasRenderer } from 'echarts/renderers'
+import 'echarts-wordcloud'
 
 echarts.use([
   RadarChart,
-  SunburstChart,
   SankeyChart,
   TitleComponent,
   TooltipComponent,
@@ -46,8 +46,8 @@ const t = (key) => {
     'tech_domains': { en: 'Technology Domains', zh: '技术领域' },
     'radar_title': { en: 'Technology Domain Radar', zh: '技术领域雷达图' },
     'domain_distribution': { en: 'Domain Distribution', zh: '领域分布' },
-    'sunburst_title': { en: 'Three-Level Domain Distribution', zh: '三级技术领域分布' },
-    'sunburst_subtitle': { en: '(Click inner ring to zoom)', zh: '(点击内环可放大)' },
+    'wordcloud_title': { en: 'Technology Domain Word Cloud', zh: '技术领域词云' },
+    'wordcloud_subtitle': { en: '(Size indicates importance)', zh: '(大小表示重要性)' },
     'sankey_title': { en: 'Domain Hierarchy Flow (Sankey)', zh: '领域层级流向图 (Sankey)' },
     'score': { en: 'Score', zh: '得分' }
   }
@@ -68,11 +68,11 @@ const top3Level1 = computed(() =>
 )
 
 const radarRef = ref(null)
-const sunburstRef = ref(null)
+const wordcloudRef = ref(null)
 const sankeyRef = ref(null)
 
 let radarInstance = null
-let sunburstInstance = null
+let wordcloudInstance = null
 let sankeyInstance = null
 
 // Color palette - professionally designed with better contrast and harmony
@@ -150,25 +150,61 @@ function renderRadar() {
   })
 }
 
-function toSunburst(nodes = []) {
-  return nodes.map(n => ({ 
-    name: n.name, 
-    value: n.score, 
-    itemStyle: { borderRadius: 4 },
-    children: n.children ? toSunburst(n.children) : undefined 
-  }))
+function toWordCloudData(nodes = []) {
+  let data = [];
+  
+  // Process first level domains
+  nodes.forEach(node => {
+    data.push({
+      name: node.name,
+      value: node.score * 10, // Multiply by 10 to make sizes more apparent
+      textStyle: {
+        color: colorPalette[data.length % colorPalette.length],
+        fontWeight: 'bold'
+      }
+    });
+    
+    // Process second level domains
+    if (node.children && node.children.length) {
+      node.children.forEach(child => {
+        data.push({
+          name: child.name,
+          value: child.score * 8, // Slightly smaller than first level
+          textStyle: {
+            color: colorPalette[(data.length + 2) % colorPalette.length]
+          }
+        });
+        
+        // Process third level domains
+        if (child.children && child.children.length) {
+          child.children.forEach(grandchild => {
+            data.push({
+              name: grandchild.name,
+              value: grandchild.score * 6, // Smaller than second level
+              textStyle: {
+                color: colorPalette[(data.length + 4) % colorPalette.length],
+                fontSize: Math.max(12, grandchild.score / 2)
+              }
+            });
+          });
+        }
+      });
+    }
+  });
+  
+  return data;
 }
 
-function renderSunburst() {
-  if (!sunburstRef.value || !sunburstInstance || !hasData.value) return
+function renderWordCloud() {
+  if (!wordcloudRef.value || !wordcloudInstance || !hasData.value) return
   
-  const data = toSunburst(top3Level1.value)
+  const data = toWordCloudData(top3Level1.value);
   
-  sunburstInstance.setOption({
+  wordcloudInstance.setOption({
     color: colorPalette,
     tooltip: { 
       trigger: 'item', 
-      formatter: (params) => `${params.name}<br/>${t('score')}: ${params.value}`,
+      formatter: (params) => `${params.name}<br/>${t('score')}: ${params.value / 10}`,
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: '#ccc',
       borderWidth: 1,
@@ -178,15 +214,14 @@ function renderSunburst() {
     },
     toolbox: {
       feature: {
-        restore: {},
         saveAsImage: {}
       },
       right: 20,
       top: 20
     },
     title: { 
-      text: t('sunburst_title'), 
-      subtext: t('sunburst_subtitle'), 
+      text: t('wordcloud_title'), 
+      subtext: t('wordcloud_subtitle'), 
       left: 'center', 
       top: 10,
       textStyle: {
@@ -198,73 +233,29 @@ function renderSunburst() {
       }
     },
     series: [{
-      type: 'sunburst', 
-      nodeClick: 'zoomToNode', 
-      data,
-      radius: [60, '90%'], 
-      minAngle: 5, 
-      sort: undefined,
+      type: 'wordCloud',
+      shape: 'circle',
+      sizeRange: [12, 60],
+      rotationRange: [-45, 45],
+      rotationStep: 5,
+      gridSize: 8,
+      drawOutOfBound: false,
+      textStyle: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        fontWeight: 'normal',
+        color: function() {
+          return colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        }
+      },
       emphasis: {
-        focus: 'ancestor',
-        itemStyle: {
+        textStyle: {
           shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
+          shadowColor: 'rgba(0, 0, 0, 0.3)'
         }
       },
-      label: { 
-        rotate: 'radial', 
-        overflow: 'truncate', 
-        ellipsis: '…', 
-        fontSize: 12,
-        minAngle: 10,
-        color: '#fff'
-      },
-      itemStyle: {
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.5)'
-      },
-      levels: [
-        {},
-        { 
-          r0: 60, 
-          r: 140, 
-          label: { 
-            fontSize: 16, 
-            fontWeight: 'bold', 
-            color: '#fff', 
-            rotate: 0,
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            borderRadius: 4,
-            padding: [4, 8]
-          },
-          itemStyle: {
-            borderWidth: 2
-          }
-        },
-        { 
-          r0: 140, 
-          r: 210, 
-          label: { 
-            rotate: 'tangential', 
-            fontSize: 13,
-            color: '#fff'
-          } 
-        },
-        { 
-          r0: 210, 
-          r: 270, 
-          label: { 
-            position: 'outside',
-            fontSize: 11,
-            color: '#333',
-            alignTo: 'edge',
-            minAngle: 6
-          } 
-        }
-      ]
+      data: data
     }]
-  })
+  });
 }
 
 function toSankey(nodes) {
@@ -391,7 +382,7 @@ function renderSankey() {
 // Resize handler
 function handleResize() {
   radarInstance?.resize()
-  sunburstInstance?.resize()
+  wordcloudInstance?.resize()
   sankeyInstance?.resize()
 }
 
@@ -404,9 +395,9 @@ onMounted(async () => {
     renderRadar()
   }
   
-  if (sunburstRef.value) {
-    sunburstInstance = echarts.init(sunburstRef.value)
-    renderSunburst()
+  if (wordcloudRef.value) {
+    wordcloudInstance = echarts.init(wordcloudRef.value)
+    renderWordCloud()
   }
   
   if (sankeyRef.value) {
@@ -421,14 +412,14 @@ onMounted(async () => {
   return () => {
     window.removeEventListener('resize', handleResize)
     radarInstance?.dispose()
-    sunburstInstance?.dispose()
+    wordcloudInstance?.dispose()
     sankeyInstance?.dispose()
   }
 })
 
 watch(flattenData, () => {
   renderRadar()
-  renderSunburst()
+  renderWordCloud()
   renderSankey()
 })
 </script>
@@ -447,7 +438,7 @@ watch(flattenData, () => {
   background: #fff;
 }
 
-.sunburst {
+.wordcloud {
   height: 500px;
 }
 
