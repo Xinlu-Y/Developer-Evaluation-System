@@ -104,14 +104,21 @@ def get_user_repos(username):
                 fork_count = repo.get("forks_count", 0)
                 total_stars += star_count
                 total_forks += fork_count
-
+                langs_url = repo.get("languages_url")
+                languages = []
+                langs_resp = requests.get(langs_url, headers=headers)
+                if langs_resp.status_code == 200:
+                    langs_json = langs_resp.json()
+                    languages = list(langs_json.keys())
                 repos.append({
                     "repo_name": repo.get("name"),
                     "repo_description": repo.get("description"),
                     "Star": star_count,
                     "Fork": fork_count,
                     "repo_type": repo_type,
-                    "html_url": repo.get("html_url", "")
+                    "html_url": repo.get("html_url", ""),
+                    "repo_topics": repo.get("topics", []),
+                    "repo_languages": languages
                 })
 
             page += 1

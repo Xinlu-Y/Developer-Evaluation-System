@@ -228,14 +228,13 @@ def initialize_vector_matcher():
 VECTOR_MATCHER = initialize_vector_matcher()
 
 class WeightNormalizer:
-    """实现 TF-IDF 和 Softmax 归一化权重的类"""
     def __init__(self):
-        self.document_frequencies = Counter()
-        self.total_documents = 0
-        self.initialized = False
-        self.idf_cache = {}
+        self.document_frequencies: Counter = Counter()
+        self.total_documents: int = 0
+        self.initialized: bool = False
+        self.idf_cache: Dict[str,float] = {}
 
-    def build_document_frequencies(self, repos: List[Dict[str, Any]]):
+    def build_document_frequencies(self, repos: List[Dict[str,Any]]):
         logger.info("开始构建文档频率统计 …")
         self.document_frequencies.clear()
         self.total_documents = len(repos)
@@ -245,34 +244,32 @@ class WeightNormalizer:
                 kws |= set(extract_keywords(repo['repo_name']))
             if repo.get('repo_description'):
                 kws |= set(extract_keywords(repo['repo_description']))
-            kws |= {t.lower() for t in repo.get('topics', [])}
+            kws |= {t.lower() for t in repo.get('topics',[])}
             for kw in kws:
                 self.document_frequencies[kw] += 1
-        self._compute_idf_cache()
-        self.initialized = True
-        logger.info(f"文档频率统计完成，共 {self.total_documents} 个仓库")
-
-    def _compute_idf_cache(self):
         total = max(1, self.total_documents)
         for kw, df in self.document_frequencies.items():
-            self.idf_cache[kw] = math.log((total + 1) / (df + 1)) + 1
+            self.idf_cache[kw] = math.log((total+1)/(df+1)) + 1
+        self.initialized = True
+        logger.info(f"文档频率统计完成: {self.total_documents} 个仓库, {len(self.idf_cache)} 个关键词")
 
     def get_tfidf_weight(self, keyword: str, tf: int = 1) -> float:
         if not self.initialized:
             return 1.0
-        idf = self.idf_cache.get(keyword.lower(),
-                                 math.log((self.total_documents + 1) / 1) + 1)
+        idf = self.idf_cache.get(keyword.lower(), math.log((self.total_documents+1)/1)+1)
         return tf * idf
 
     @staticmethod
-    def apply_softmax(scores: Dict[str, float], temperature: float = 1.0) -> Dict[str, float]:
+    def apply_softmax(scores: Dict[str,float], temperature: float = 1.0) -> Dict[str,float]:
         if not scores:
             return {}
         items, vals = zip(*scores.items())
         arr = np.array(vals) / temperature
         exp = np.exp(arr - np.max(arr))
         sm = exp / np.sum(exp)
-        return {items[i]: float(sm[i]) for i in range(len(items))}
+        # 添加保底值，避免得分为0导致展示异常
+        return {items[i]: max(float(sm[i]), 0.001) for i in range(len(items))}
+
 
 # 信号源与层级权重
 SIGNAL_WEIGHTS = {
@@ -366,64 +363,124 @@ def map_keywords_to_domains(keywords, signal):
             l3_scores[lvl3] += weight
     return l1_scores, l2_scores, l3_scores
 
+import logging
+from collections import Counter
+from typing import Tuple
+
+logger = logging.getLogger(__name__)
+
 def analyze_repository_with_weights(repo,
                                     weight_normalizer: WeightNormalizer,
-                                    apply_tfidf=True) -> Tuple[Counter,Counter,Counter]:
+                                    apply_tfidf=True) -> Tuple[Counter, Counter, Counter]:
     name_kws = extract_keywords(repo.get('repo_name',''))
     desc_kws = extract_keywords(repo.get('repo_description',''))
-    all_kws = name_kws + desc_kws + repo.get('topics', [])
+    all_kws = name_kws + desc_kws + repo.get('repo_topics', [])
     tf_counts = Counter(all_kws)
 
-    total_l1 = Counter(); total_l2 = Counter(); total_l3 = Counter()
+    total_l1, total_l2, total_l3 = Counter(), Counter(), Counter()
+    print("DEBUG: repo['repo_topics'] =", repo.get('repo_topics', '不存在'))
+    print("DEBUG: repo['repo_languages'] =", repo.get('repo_languages', '不存在'))
 
+    # 用于调试的结构，记录每个信号源的明细
+    contributions = {
+        'repo_name': [],
+        'repo_description': [],
+        'topics': [],
+        'language': []
+    }
+
+    # 1) 名称 & 描述
     for kws, sig in [(name_kws,'repo_name'), (desc_kws,'repo_description')]:
         for kw in kws:
             m = match_domain_for_keyword_extended(kw, VECTOR_MATCHER)
-            if not m: continue
-            lvl1,lvl2,lvl3,base_w = m
+            if not m: 
+                continue
+            lvl1, lvl2, lvl3, base_w = m
             w = SIGNAL_WEIGHTS[sig] * base_w
             if apply_tfidf and weight_normalizer.initialized:
                 w *= weight_normalizer.get_tfidf_weight(kw, tf_counts[kw])
+
             total_l1[lvl1] += w
             total_l2[lvl2] += w
             total_l3[lvl3] += w
 
-    for t in repo.get('topics', []):
+            # 记录调试信息
+            contributions[sig].append({
+                'kw': kw,
+                'mapped': (lvl1, lvl2, lvl3),
+                'weight': round(w, 4)
+            })
+
+    # 2) topics
+    for t in repo.get('repo_topics', []):
         m = match_domain_for_keyword_extended(t, VECTOR_MATCHER)
-        if not m: continue
-        lvl1,lvl2,lvl3,base_w = m
+        if not m:
+            continue
+        lvl1, lvl2, lvl3, base_w = m
         w = SIGNAL_WEIGHTS['topics'] * base_w
         if apply_tfidf and weight_normalizer.initialized:
             w *= weight_normalizer.get_tfidf_weight(t, tf_counts[t])
+
         total_l1[lvl1] += w
         total_l2[lvl2] += w
         total_l3[lvl3] += w
 
-    lang = repo.get('language','').lower()
-    tfidf_lang = 1.0
-    if apply_tfidf and weight_normalizer.initialized:
-        tfidf_lang = weight_normalizer.get_tfidf_weight(lang, 1)
-    for lvl2 in LANGUAGE_TO_DOMAINS.get(lang, []):
-        lvl1 = L2_TO_L1.get(lvl2)
-        base_w = LEVEL_WEIGHTS['language']
-        w = SIGNAL_WEIGHTS['language'] * base_w * tfidf_lang
-        if lvl1:
-            total_l1[lvl1] += w
-        total_l2[lvl2] += w
+        contributions['topics'].append({
+            'topic': t,
+            'mapped': (lvl1, lvl2, lvl3),
+            'weight': round(w, 4)
+        })
+
+    # 3) language
+    langs = repo.get('repo_languages', [])
+    if isinstance(langs, str):
+        langs = [langs]
+
+    for lang in langs:
+        lang = lang.lower()
+        tfidf_lang = 1.0
+        if apply_tfidf and weight_normalizer.initialized:
+            tfidf_lang = weight_normalizer.get_tfidf_weight(lang, 1)
+
+        for lvl2 in LANGUAGE_TO_DOMAINS.get(lang, []):
+            lvl1 = L2_TO_L1.get(lvl2)
+            base_w = LEVEL_WEIGHTS['language']
+            w = SIGNAL_WEIGHTS['language'] * base_w * tfidf_lang
+
+            if lvl1:
+                total_l1[lvl1] += w
+            total_l2[lvl2] += w
+
+            contributions['language'].append({
+                'language': lang,
+                'mapped': (lvl1, lvl2),
+                'weight': round(w, 4)
+            })
+
+    logger.info(f"仓库 [{repo.get('repo_name')}] 信号源贡献明细：")
+    for sig, entries in contributions.items():
+        if not entries:
+            logger.info(f"  - {sig}: （无匹配项）")
+            continue
+        logger.info(f"  - {sig}:")
+        for e in entries:
+            if sig == 'language':
+                logger.info(f"      · {e['language']} → L1={e['mapped'][0]}, L2={e['mapped'][1]}, w={e['weight']}")
+            else:
+                key = e.get('kw') or e.get('topic')
+                logger.info(f"      · “{key}” → L1={e['mapped'][0]}, L2={e['mapped'][1]}, L3={e['mapped'][2]}, w={e['weight']}")
 
     return total_l1, total_l2, total_l3
 
 
+
 # --- 主分析函数 ---
 def get_developer_domains_weighted(username: str,
-                                  repos: List[Dict[str,Any]],
+                                  owner_repos: List[Dict[str,Any]],
                                   apply_tfidf: bool = True,
                                   apply_softmax: bool = True,
                                   softmax_temp: float = 0.5
 ) -> List[Dict[str,Any]]:
-    owner_repos = [r for r in repos if r.get('repo_type')=='owner']
-    if not owner_repos:
-        return []
     normalizer = WeightNormalizer()
     if apply_tfidf:
         normalizer.build_document_frequencies(owner_repos)
@@ -443,8 +500,10 @@ def get_developer_domains_weighted(username: str,
         agg_l3 = WeightNormalizer.apply_softmax(agg_l3, softmax_temp)
     # 转化为百分比
     def to_percent(c):
-        if not c: return {}
-        m = max(c.values()); return {k: round(v/m*100,1) for k,v in c.items()}
+        if not c:
+            return {}
+        m = max(c.values()) if c else 1
+        return {k: max(round(v / m * 100, 1), 0.1) for k, v in c.items()}
     normalized_l1 = to_percent(agg_l1)
     normalized_l2 = to_percent(agg_l2)
     normalized_l3_flat = to_percent(agg_l3)
@@ -489,73 +548,74 @@ if __name__ == "__main__":
             "repo_type": "owner",
             "repo_name": "vue-dashboard",
             "repo_description": "基于Vue3 + Vite构建的企业级管理后台模板",
-            "language": "JavaScript",
-            "topics": ["vue", "vite", "admin-dashboard"]
+            "repo_languages": "JavaScript",
+            "repo_topics": ["vue", "vite", "admin-dashboard"]
         },
         {
             "repo_type": "owner",
             "repo_name": "flask_app_template",
             "repo_description": "A simple flask-based microservice API starter project",
-            "language": "Python",
-            "topics": ["flask", "rest", "microservice"]
+            "repo_languages": "Python",
+            "repo_topics": ["flask", "rest", "microservice"]
         },
         {
             "repo_type": "owner",
             "repo_name": "llm-evaluator",
             "repo_description": "Using transformer-based LLMs for sentiment classification and QA tasks.",
-            "language": "Python",
-            "topics": ["llm", "transformers", "huggingface"]
+            "repo_languages": "Python",
+            "repo_topics": ["llm", "transformers", "huggingface"]
         },
         {
             "repo_type": "owner",
             "repo_name": "open-vision",
             "repo_description": "Real-time object detection with yolov5 and OpenCV",
-            "language": "Python",
-            "topics": ["opencv", "object-detection", "yolo"]
+            "repo_languages": "Python",
+            "repo_topics": ["opencv", "object-detection", "yolo"]
         },
         {
             "repo_type": "owner",
             "repo_name": "qt_ui_generator",
             "repo_description": "Cross-platform GUI generator built with Qt6 and Python.",
-            "language": "C++",
-            "topics": ["qt", "cross-platform", "gui"]
+            "repo_languages": "C++",
+            "repo_topics": ["qt", "cross-platform", "gui"]
         },
         {
             "repo_type": "owner",
             "repo_name": "data-analyse-toolkit",
             "repo_description": "EDA and visualization using pandas, seaborn, and matplotlib.",
-            "language": "Python",
-            "topics": ["eda", "visualization", "matplotlib"]
+            "repo_languages": "Python",
+            "repo_topics": ["eda", "visualization", "matplotlib"]
         },
         {
             "repo_type": "owner",
             "repo_name": "secure-web-auth",
             "repo_description": "OAuth2 + JWT authentication for single-page apps.",
-            "language": "JavaScript",
-            "topics": ["oauth", "jwt", "web-security"]
+            "repo_languages": "JavaScript",
+            "repo_topics": ["oauth", "jwt", "web-security"]
         },
         {
             "repo_type": "owner",
             "repo_name": "gameai-unity",
             "repo_description": "Exploring reinforcement learning with Unity ML-Agents toolkit",
-            "language": "C#",
-            "topics": ["unity", "reinforcement-learning", "ml-agents"]
+            "repo_languages": "C#",
+            "repo_topics": ["unity", "reinforcement-learning", "ml-agents"]
         },
         {
             "repo_type": "owner",
             "repo_name": "electron-note",
             "repo_description": "An offline desktop markdown note app based on Electron and React.",
-            "language": "JavaScript",
-            "topics": ["electron", "react", "desktop-app"]
+            "repo_languages": "JavaScript",
+            "repo_topics": ["electron", "react", "desktop-app"]
         },
         {
             "repo_type": "owner",
             "repo_name": "text2img",
             "repo_description": "Diffusion-based text to image generator using stable-diff.",
-            "language": "Python",
-            "topics": ["diffusion", "text-to-image", "generative-ai"]
+            "repo_languages": "Python",
+            "repo_topics": ["diffusion", "text-to-image", "generative-ai"]
         }
     ]
+
 
     
     print("测试1：使用模拟数据分析领域")

@@ -320,7 +320,10 @@ def search_by_domain():
                 
                 # 分析开发者技术领域
                 try:
-                    domains = get_developer_domains(username, user_repo)
+                    domains = get_developer_domains_weighted(username, owner_repos,
+                                                            apply_tfidf=True,
+                                                            apply_softmax=True,
+                                                            softmax_temp=0.5)
                     logger.info(f"获取到用户 '{username}' 的技术领域: {domains}")
                 except Exception as e:
                     logger.warning(f"分析用户 '{username}' 的技术领域失败: {str(e)}")
