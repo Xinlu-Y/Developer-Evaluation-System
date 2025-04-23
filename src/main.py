@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from contribution_analysis import calculate_talent_rank, evaluate_overall_contribution, get_user_contributed_repos
 from country_prediction import predict_developer_country
-from domain_analysis import get_developer_domains
+from domain_analysis import get_developer_domains, convert_numpy
 from geo_utils import get_country_name
 from search_utils import search_repositories_by_language_and_topic
 from user_profile import (get_user_repos, get_user_total_stars)  
@@ -127,7 +127,7 @@ def get_developer_info(username):
             "contributions": member_repos,
             "total_stars": total_stars,
             "talent_rank_score": talent_rank_score,
-            "domains": domains
+            "domains": convert_numpy(domains)
         }
         
         return jsonify(response_data)
