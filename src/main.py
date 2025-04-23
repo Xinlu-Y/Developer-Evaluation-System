@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from contribution_analysis import calculate_talent_rank, evaluate_overall_contribution, get_user_contributed_repos
 from country_prediction import predict_developer_country
-from domain_analysis import get_developer_domains, convert_numpy
+from domain_analysis import get_developer_domains_weighted, convert_numpy
 from geo_utils import get_country_name
 from search_utils import search_repositories_by_language_and_topic
 from user_profile import (get_user_repos, get_user_total_stars)  
@@ -111,7 +111,10 @@ def get_developer_info(username):
         
         # 分析开发者技术领域
         try:
-            domains = get_developer_domains(username, user_repo)
+            domains = get_developer_domains_weighted(username, user_repo,
+                                                    apply_tfidf=True,
+                                                    apply_softmax=True,
+                                                    softmax_temp=0.5)
             logger.info(f"获取到用户 '{username}' 的技术领域: {domains}")
         except Exception as e:
             logger.warning(f"分析用户 '{username}' 的技术领域失败: {str(e)}")

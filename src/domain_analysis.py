@@ -10,19 +10,18 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
+import math
+from typing import Dict, List, Any, Tuple
 
-# 尝试导入config，如果失败则使用默认header
 try:
     from config import headers
 except ModuleNotFoundError:
-    # 如果找不到config模块，使用默认的headers
     headers = {
         'User-Agent': 'Developer-Evaluation-System',
         'Accept': 'application/vnd.github.v3+json'
     }
     logging.warning("未找到config模块，使用默认headers")
 
-# 配置日志格式
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -34,9 +33,7 @@ try:
     nlp = spacy.load("en_core_web_sm")
     logging.info("成功加载spaCy模型 'en_core_web_sm'")
 except OSError:
-    # 如果模型未下载，提示错误但不自动下载
     logging.error("spaCy模型未找到。请先运行: python -m spacy download en_core_web_sm")
-    # 创建一个空的NLP对象作为后备
     nlp = spacy.blank("en")
     logging.warning("使用空白spaCy模型作为后备方案")
 
@@ -230,6 +227,53 @@ def initialize_vector_matcher():
 # 在模块加载时构建一次全局 matcher
 VECTOR_MATCHER = initialize_vector_matcher()
 
+class WeightNormalizer:
+    """实现 TF-IDF 和 Softmax 归一化权重的类"""
+    def __init__(self):
+        self.document_frequencies = Counter()
+        self.total_documents = 0
+        self.initialized = False
+        self.idf_cache = {}
+
+    def build_document_frequencies(self, repos: List[Dict[str, Any]]):
+        logger.info("开始构建文档频率统计 …")
+        self.document_frequencies.clear()
+        self.total_documents = len(repos)
+        for repo in repos:
+            kws = set()
+            if repo.get('repo_name'):
+                kws |= set(extract_keywords(repo['repo_name']))
+            if repo.get('repo_description'):
+                kws |= set(extract_keywords(repo['repo_description']))
+            kws |= {t.lower() for t in repo.get('topics', [])}
+            for kw in kws:
+                self.document_frequencies[kw] += 1
+        self._compute_idf_cache()
+        self.initialized = True
+        logger.info(f"文档频率统计完成，共 {self.total_documents} 个仓库")
+
+    def _compute_idf_cache(self):
+        total = max(1, self.total_documents)
+        for kw, df in self.document_frequencies.items():
+            self.idf_cache[kw] = math.log((total + 1) / (df + 1)) + 1
+
+    def get_tfidf_weight(self, keyword: str, tf: int = 1) -> float:
+        if not self.initialized:
+            return 1.0
+        idf = self.idf_cache.get(keyword.lower(),
+                                 math.log((self.total_documents + 1) / 1) + 1)
+        return tf * idf
+
+    @staticmethod
+    def apply_softmax(scores: Dict[str, float], temperature: float = 1.0) -> Dict[str, float]:
+        if not scores:
+            return {}
+        items, vals = zip(*scores.items())
+        arr = np.array(vals) / temperature
+        exp = np.exp(arr - np.max(arr))
+        sm = exp / np.sum(exp)
+        return {items[i]: float(sm[i]) for i in range(len(items))}
+
 # 信号源与层级权重
 SIGNAL_WEIGHTS = {
     'repo_name': 1.0,
@@ -322,118 +366,106 @@ def map_keywords_to_domains(keywords, signal):
             l3_scores[lvl3] += weight
     return l1_scores, l2_scores, l3_scores
 
-# --- 仓库分析 ---
-def analyze_repository(repo):
+def analyze_repository_with_weights(repo,
+                                    weight_normalizer: WeightNormalizer,
+                                    apply_tfidf=True) -> Tuple[Counter,Counter,Counter]:
     name_kws = extract_keywords(repo.get('repo_name',''))
     desc_kws = extract_keywords(repo.get('repo_description',''))
-    # 初始化三层级计分
-    total_l1, total_l2, total_l3 = Counter(), Counter(), Counter()
-    # 名称和描述
-    for kws, signal in [(name_kws,'repo_name'), (desc_kws,'repo_description')]:
-        l1,l2,l3 = map_keywords_to_domains(kws, signal)
-        total_l1.update(l1)
-        total_l2.update(l2)
-        total_l3.update(l3)
-    # topics
-    for t in repo.get('topics',[]):
-        m = match_domain_for_keyword(t)
-        if m:
-            lvl1, lvl2, lvl3, _ = m
-            total_l1[lvl1] += SIGNAL_WEIGHTS['topics'] * LEVEL_WEIGHTS['topic']
-            total_l2[lvl2] += SIGNAL_WEIGHTS['topics'] * LEVEL_WEIGHTS['topic']
-            total_l3[lvl3] += SIGNAL_WEIGHTS['topics'] * LEVEL_WEIGHTS['topic']
-    # language
+    all_kws = name_kws + desc_kws + repo.get('topics', [])
+    tf_counts = Counter(all_kws)
+
+    total_l1 = Counter(); total_l2 = Counter(); total_l3 = Counter()
+
+    for kws, sig in [(name_kws,'repo_name'), (desc_kws,'repo_description')]:
+        for kw in kws:
+            m = match_domain_for_keyword_extended(kw, VECTOR_MATCHER)
+            if not m: continue
+            lvl1,lvl2,lvl3,base_w = m
+            w = SIGNAL_WEIGHTS[sig] * base_w
+            if apply_tfidf and weight_normalizer.initialized:
+                w *= weight_normalizer.get_tfidf_weight(kw, tf_counts[kw])
+            total_l1[lvl1] += w
+            total_l2[lvl2] += w
+            total_l3[lvl3] += w
+
+    for t in repo.get('topics', []):
+        m = match_domain_for_keyword_extended(t, VECTOR_MATCHER)
+        if not m: continue
+        lvl1,lvl2,lvl3,base_w = m
+        w = SIGNAL_WEIGHTS['topics'] * base_w
+        if apply_tfidf and weight_normalizer.initialized:
+            w *= weight_normalizer.get_tfidf_weight(t, tf_counts[t])
+        total_l1[lvl1] += w
+        total_l2[lvl2] += w
+        total_l3[lvl3] += w
+
     lang = repo.get('language','').lower()
-    for lvl2 in LANGUAGE_TO_DOMAINS.get(lang,[]):
+    tfidf_lang = 1.0
+    if apply_tfidf and weight_normalizer.initialized:
+        tfidf_lang = weight_normalizer.get_tfidf_weight(lang, 1)
+    for lvl2 in LANGUAGE_TO_DOMAINS.get(lang, []):
         lvl1 = L2_TO_L1.get(lvl2)
-        w = SIGNAL_WEIGHTS['language'] * LEVEL_WEIGHTS['language']
+        base_w = LEVEL_WEIGHTS['language']
+        w = SIGNAL_WEIGHTS['language'] * base_w * tfidf_lang
         if lvl1:
             total_l1[lvl1] += w
         total_l2[lvl2] += w
+
     return total_l1, total_l2, total_l3
 
+
 # --- 主分析函数 ---
-def get_developer_domains(username, repos):
-    """
-    分析开发者的技术领域，返回分层结构:
-    - level1: 一级领域及其得分
-    - level2: 二级领域及其得分
-    - level3: 层级3字段按二级领域分组的字典
-    """
-     # 只分析 owner 仓库
-    repos = [r for r in repos if r.get('repo_type') == 'owner']
-    total_l1, total_l2, total_l3 = Counter(), Counter(), Counter()
-
-    # 如果没有仓库，返回空列表
-    if not repos:
+def get_developer_domains_weighted(username: str,
+                                  repos: List[Dict[str,Any]],
+                                  apply_tfidf: bool = True,
+                                  apply_softmax: bool = True,
+                                  softmax_temp: float = 0.5
+) -> List[Dict[str,Any]]:
+    owner_repos = [r for r in repos if r.get('repo_type')=='owner']
+    if not owner_repos:
         return []
-
-    # 1) 对每个仓库先归一化它自己的 l1、l2、l3 分
-    for repo in repos:
-        l1, l2, l3 = analyze_repository(repo)
-
-        def local_normalize(c: Counter):
-            if not c:
-                return {}
-            m = max(c.values())
-            return {k: v / m for k, v in c.items()}
-
-        norm_l1 = local_normalize(l1)
-        norm_l2 = local_normalize(l2)
-        norm_l3 = local_normalize(l3)
-
-        # 累加回总计数器（每个仓库对每个领域的贡献都在 [0,1]）
-        for k, v in norm_l1.items():
-            total_l1[k] += v
-        for k, v in norm_l2.items():
-            total_l2[k] += v
-        for k, v in norm_l3.items():
-            total_l3[k] += v
-
-    # 2) 把这三个总计数器归一化到 0–100
-    def to_percent(c: Counter):
-        if not c:
-            return {}
-        m = max(c.values())
-        return {k: round(v / m * 100, 1) for k, v in c.items()}
-
-    normalized_l1 = to_percent(total_l1)
-    normalized_l2 = to_percent(total_l2)
-    normalized_l3_flat = to_percent(total_l3)
-
-    # 3) 将 level3 平铺结构按 level2 分组
+    normalizer = WeightNormalizer()
+    if apply_tfidf:
+        normalizer.build_document_frequencies(owner_repos)
+    agg_l1 = Counter(); agg_l2 = Counter(); agg_l3 = Counter()
+    # 各仓库分析与本地归一化
+    for repo in owner_repos:
+        l1,l2,l3 = analyze_repository_with_weights(repo, normalizer, apply_tfidf)
+        def norm(c):
+            if not c: return {}
+            m = max(c.values()); return {k: v/m for k,v in c.items()}
+        nl1,nl2,nl3 = norm(l1), norm(l2), norm(l3)
+        agg_l1.update(nl1); agg_l2.update(nl2); agg_l3.update(nl3)
+    # 最终 Softmax 归一化
+    if apply_softmax:
+        agg_l1 = WeightNormalizer.apply_softmax(agg_l1, softmax_temp)
+        agg_l2 = WeightNormalizer.apply_softmax(agg_l2, softmax_temp)
+        agg_l3 = WeightNormalizer.apply_softmax(agg_l3, softmax_temp)
+    # 转化为百分比
+    def to_percent(c):
+        if not c: return {}
+        m = max(c.values()); return {k: round(v/m*100,1) for k,v in c.items()}
+    normalized_l1 = to_percent(agg_l1)
+    normalized_l2 = to_percent(agg_l2)
+    normalized_l3_flat = to_percent(agg_l3)
+    # 分组 & 构建树形结构
     grouped_l3 = defaultdict(dict)
     for lvl3_name, score in normalized_l3_flat.items():
         lvl2_name = L3_TO_L2.get(lvl3_name.lower())
         if lvl2_name:
             grouped_l3[lvl2_name][lvl3_name] = score
-
-    # 4) 构建树形结构
     hierarchy = []
     for lvl1_name, lvl1_score in normalized_l1.items():
-        lvl1_node = {
-            "name": lvl1_name,
-            "score": lvl1_score,
-            "children": []
-        }
-        # 把属于该一级领域的所有二级领域挂进去
+        node1 = {"name": lvl1_name, "score": lvl1_score, "children": []}
         for lvl2_name, lvl2_score in normalized_l2.items():
-            if L2_TO_L1.get(lvl2_name) == lvl1_name:
-                lvl2_node = {
-                    "name": lvl2_name,
-                    "score": lvl2_score,
-                    "children": []
-                }
-                # 把该二级领域下的三级细项挂进去
-                for lvl3_name, lvl3_score in grouped_l3.get(lvl2_name, {}).items():
-                    lvl2_node["children"].append({
-                        "name": lvl3_name,
-                        "score": lvl3_score
-                    })
-                lvl1_node["children"].append(lvl2_node)
-        hierarchy.append(lvl1_node)
-
+            if L2_TO_L1.get(lvl2_name)==lvl1_name:
+                node2 = {"name": lvl2_name, "score": lvl2_score, "children": []}
+                for lvl3_name, lvl3_score in grouped_l3.get(lvl2_name,{}).items():
+                    node2["children"].append({"name": lvl3_name, "score": lvl3_score})
+                node1["children"].append(node2)
+        hierarchy.append(node1)
     return hierarchy
+
 
 # 将 numpy 类型转换为标准 Python 类型（递归转换）
 def convert_numpy(obj):
@@ -527,28 +559,9 @@ if __name__ == "__main__":
 
     
     print("测试1：使用模拟数据分析领域")
-    result = get_developer_domains("test-user", test_repositories)
+    result = get_developer_domains_weighted("test-user", test_repositories,
+                                            apply_tfidf=True,
+                                            apply_softmax=True,
+                                            softmax_temp=0.5)
     print("结果:")
     print(json.dumps(convert_numpy(result), indent=2, ensure_ascii=False))
-    # print(f"结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
-    
-    # # 测试异常情况 - 空仓库列表
-    # print("\n测试2：空仓库列表")
-    # result = get_developer_domains("test-user", [])
-    # print(f"结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
-    
-    # # 测试异常情况 - 包含None的仓库
-    # print("\n测试3：包含None的仓库列表")
-    # corrupted_repos = test_repositories.copy()
-    # corrupted_repos.insert(1, None)
-    # result = get_developer_domains("test-user", corrupted_repos)
-    # print(f"结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
-    
-    # # 测试异常情况 - 包含缺少关键字段的仓库
-    # print("\n测试4：包含缺少关键字段的仓库")
-    # incomplete_repos = test_repositories.copy()
-    # incomplete_repos.append({"repo_type": "owner", "Star": 10})  # 没有repo_name
-    # result = get_developer_domains("test-user", incomplete_repos)
-    # print(f"结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
-    
-    # print("\n所有测试完成！") 
