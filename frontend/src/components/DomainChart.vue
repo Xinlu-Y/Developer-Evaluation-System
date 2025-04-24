@@ -1,7 +1,7 @@
 <template>
   <div class="domain-chart">
-    <div v-if="!hasData" class="empty">{{ noDataMessage }}</div>
-    <div v-else ref="radarRef" class="chart-container"></div>
+    <div v-if="!hasLanguageData" class="empty">{{ noDataMessage }}</div>
+    <div v-if="hasLanguageData" ref="radarRef" class="chart-container radar"></div>
     <div v-if="hasData" ref="wordcloudRef" class="chart-container wordcloud"></div>
     <div v-if="hasData" ref="sankeyRef" class="chart-container sankey"></div>
   </div>
@@ -15,8 +15,8 @@ import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
+  ToolboxComponent,
   GraphicComponent,
-  ToolboxComponent
 } from 'echarts/components'
 import { LabelLayout } from 'echarts/features'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -35,21 +35,25 @@ echarts.use([
 ])
 
 const props = defineProps({
+  languageCharacterStats: { type: Object, default: () => ({}) },
   domains: { type: Array, default: () => [] },
   noDataMessage: { type: String, default: 'No technology domains detected' },
-  language: { type: String, default: 'en' }
+  language: { type: String, default: 'zh' },
+  minPercent: { type: Number, default: 0.05 }
 })
 
 // Translation helper
 const t = (key) => {
   const translations = {
     'tech_domains': { en: 'Technology Domains', zh: '技术领域' },
-    'radar_title': { en: 'Technology Domain Radar', zh: '技术领域雷达图' },
+    'radar_title': { en: ' ', zh: ' ' },
+    'language_chars': { en: 'Character Count (bytes)', zh: '字符数 (bytes)' },
     'domain_distribution': { en: 'Domain Distribution', zh: '领域分布' },
     'wordcloud_title': { en: 'Technology Domain Word Cloud', zh: '技术领域词云' },
     'wordcloud_subtitle': { en: '(Size indicates importance)', zh: '(大小表示重要性)' },
     'sankey_title': { en: 'Domain Hierarchy Flow (Sankey)', zh: '领域层级流向图 (Sankey)' },
-    'score': { en: 'Score', zh: '得分' }
+    'score': { en: 'Score', zh: '得分' },
+    'no_language_data': { en: 'No language data available', zh: '没有可用的语言数据' }
   }
   return translations[key]?.[props.language] || key
 }
@@ -59,8 +63,13 @@ const flattenData = computed(() =>
     ? props.domains.map(d => ({ name: d.name, value: d.score }))
     : []
 )
-const hasData = computed(() => flattenData.value.length > 0)
-
+const hasData = computed(() => 
+  flattenData.value.length > 0
+)
+const hasLanguageData = computed(() => 
+  props.languageCharacterStats && 
+  Object.keys(props.languageCharacterStats).length > 0
+)
 const top3Level1 = computed(() =>
   Array.isArray(props.domains)
     ? [...props.domains].sort((a, b) => b.score - a.score).slice(0, 3)
@@ -75,79 +84,78 @@ let radarInstance = null
 let wordcloudInstance = null
 let sankeyInstance = null
 
-// Color palette - professionally designed with better contrast and harmony
 const colorPalette = [
   '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
   '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#4ec9b0'
 ]
 
 function renderRadar() {
-  if (!radarRef.value || !radarInstance || !hasData.value) return
-  
-  radarInstance.setOption({
+  if (!radarRef.value || !hasLanguageData.value) return
+
+  const existing = echarts.getInstanceByDom(radarRef.value)
+  if (existing) existing.dispose()
+  radarInstance = echarts.init(radarRef.value)
+
+  const stats = props.languageCharacterStats
+  const entries = Object.entries(stats).map(([name, val]) => ({ name, value: val }))
+  if (!entries.length) return
+
+  const maxVal    = Math.max(...entries.map(i => i.value))
+  const threshold = maxVal * props.minPercent
+
+  let filtered = entries.filter(i => i.value >= threshold)
+  if (!filtered.length) {
+    const topOne = entries.reduce((p,c) => c.value>p.value?c:p, entries[0])
+    filtered = [topOne]
+  }
+  const labels = filtered.map(i => i.name)
+  const values = filtered.map(i => i.value)
+
+  const maxScale = Math.max(...entries.map(i => i.value)) * 1.2
+
+  const option = {
     color: colorPalette,
-    title: { 
-      text: t('radar_title'), 
-      left: 'center',
-      textStyle: {
-        fontSize: 18,
-        fontWeight: 'bold'
-      }
+    title: {
+      text: t('radar_title'), left: 'left', top: 10,
+      textStyle: { fontSize: 18, fontWeight: 'bold' }
     },
     tooltip: {
+      show: true,
       trigger: 'item',
-      formatter: (params) => {
-        return `${params.name}: ${params.value}`
-      },
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderColor: '#ccc',
-      borderWidth: 1,
-      textStyle: {
-        color: '#333'
+      formatter: params => {
+        let text = `<strong>${params.seriesName}</strong><br/>`
+        params.value.forEach((v,i)=>{
+          text += `${labels[i]}: ${v.toLocaleString()}<br/>`
+        })
+        return text
       }
     },
     radar: {
-      indicator: flattenData.value.map(i => ({ name: i.name, max: 100 })),
-      shape: 'circle',
-      splitNumber: 4,
-      axisName: {
-        fontSize: 12,
-        color: '#555',
-        fontWeight: 'bold'
-      },
-      splitArea: {
-        areaStyle: {
-          color: ['rgba(255, 255, 255, 0.5)', 'rgba(245, 245, 245, 0.5)']
-        }
-      },
-      axisLine: {
-        lineStyle: {
-          color: '#ddd'
-        }
-      },
-      splitLine: {
-        lineStyle: {
-          color: '#ddd'
-        }
-      }
+      shape: 'polygon', splitNumber: 5,
+      axisLine:  { lineStyle: { color: '#ddd' } },
+      splitLine: { lineStyle: { color: '#ddd' } },
+      axisName:  { color:'#333', fontSize:14 },
+      indicator: labels.map(name => ({ name, max: maxScale }))
     },
     series: [{
-      name: t('domain_distribution'),
-      type: 'radar',
+      name: t('language_chars'), type: 'radar',
       data: [{
-        value: flattenData.value.map(i => i.value),
-        name: t('domain_distribution'),
-        symbol: 'circle',
-        symbolSize: 6,
-        lineStyle: {
-          width: 2
-        },
+        value: values, name: t('language_chars'),
+        symbol: 'circle', symbolSize: 6,
+        lineStyle: { width: 2, color: colorPalette[0] },
         areaStyle: {
-          opacity: 0.3
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: colorPalette[0] },
+              { offset: 1, color: 'rgba(255,255,255,0)' }
+            ]
+          }
         }
       }]
     }]
-  })
+  }
+  radarInstance.setOption(option, { notMerge: true })
 }
 
 function toWordCloudData(nodes = []) {
@@ -389,7 +397,6 @@ function handleResize() {
 onMounted(async () => {
   await nextTick()
   
-  // Initialize charts with responsive options
   if (radarRef.value) {
     radarInstance = echarts.init(radarRef.value)
     renderRadar()
@@ -405,10 +412,8 @@ onMounted(async () => {
     renderSankey()
   }
   
-  // Add resize listener
   window.addEventListener('resize', handleResize)
   
-  // Remove event listener when component is unmounted
   return () => {
     window.removeEventListener('resize', handleResize)
     radarInstance?.dispose()
@@ -417,8 +422,11 @@ onMounted(async () => {
   }
 })
 
-watch(flattenData, () => {
+watch(() => [props.languageCharacterStats, props.minPercent], () => {
   renderRadar()
+}, { deep: true })
+
+watch(flattenData, () => {
   renderWordCloud()
   renderSankey()
 })

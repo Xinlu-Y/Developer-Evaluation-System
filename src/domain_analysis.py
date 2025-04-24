@@ -490,6 +490,14 @@ def analyze_repository_with_weights(repo,
 
     return total_l1, total_l2, total_l3
 
+def aggregate_language_characters(repos):
+    from collections import Counter
+    lang_counter = Counter()
+    for repo in repos:
+        detail = repo.get("language_detail", {})
+        for lang, count in detail.items():
+            lang_counter[lang] += count
+    return dict(lang_counter)
 
 
 # --- 主分析函数 ---

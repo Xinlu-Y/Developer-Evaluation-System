@@ -90,6 +90,7 @@
         <DomainChart
           v-if="hasDomainData"
           :domains="developer.domains"
+          :language-character-stats="developer.language_character_stats"
           no-data-message="未能检测到技术领域"
         />
       </div>
