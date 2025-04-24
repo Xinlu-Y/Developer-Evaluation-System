@@ -152,6 +152,22 @@ DOMAIN_HIERARCHY = {
     }
 }
 
+# 语言与领域关联表 - 一种语言可以关联到多个技术领域
+LANGUAGE_TO_DOMAINS = {
+    'javascript': ['Frontend', 'Backend', 'Cross-platform'],
+    'python': ['Backend', 'Machine Learning', 'NLP', 'Computer Vision', 'Data Analysis'],
+    'java': ['Backend', 'Mobile', 'Systems Programming'],
+    'c++': ['GameDev', 'Systems Programming'],
+    'c#': ['GameDev', 'Cross-platform'],
+    'go': ['Backend', 'Systems Programming'],
+    'rust': ['Systems Programming'],
+    'r': ['Data Analysis'],
+    'sql': ['Databases'],
+    'shell': ['DevOps'],
+    'html': ['Frontend'],
+    'css': ['Frontend'],
+    'typescript': ['Frontend', 'Backend'],
+}
 
 # --- 构建映射表 ---
 L3_TO_L2 = {}
@@ -290,37 +306,6 @@ TECH_STOP_WORDS = set(['app', 'application', 'system', 'tool', 'toolkit', 'frame
                       'project', 'code', 'demo', 'example', 'test', 'sample', 'implementation', 'introduction',
                       'solution', 'development', 'template', 'boilerplate', 'starter', 'package', 'module'])
 
-
-# 语言与领域关联表 - 一种语言可以关联到多个技术领域
-LANGUAGE_TO_DOMAINS = {
-    'javascript': ['frontend', 'backend', 'mobile'],
-    'typescript': ['frontend', 'backend', 'mobile'],
-    'python': ['backend', 'data-science', 'llm', 'computer-vision'],
-    'java': ['backend', 'mobile', 'systems'],
-    'kotlin': ['mobile', 'backend'],
-    'swift': ['mobile'],
-    'c#': ['gamedev', 'backend', 'systems'],
-    'c++': ['systems', 'gamedev', 'graphics'],
-    'c': ['systems', 'embedded', 'graphics'],
-    'rust': ['systems', 'backend', 'blockchain'],
-    'go': ['backend', 'systems', 'devops'],
-    'php': ['backend', 'web'],
-    'ruby': ['backend', 'web'],
-    'dart': ['mobile'],
-    'scala': ['backend', 'data-science'],
-    'solidity': ['blockchain'],
-    'r': ['data-science', 'statistics'],
-    'matlab': ['data-science', 'engineering'],
-    'shell': ['devops', 'systems'],
-    'powershell': ['devops', 'systems'],
-    'sql': ['database'],
-    'html': ['frontend'],
-    'css': ['frontend'],
-    'glsl': ['graphics', 'gamedev'],
-    'hlsl': ['graphics', 'gamedev'],
-    'assembly': ['systems', 'embedded']
-}
-
 # --- 规则引擎函数 ---
 def match_domain_for_keyword(kw):
     key = kw.lower()
@@ -381,7 +366,6 @@ def analyze_repository_with_weights(repo,
     print("DEBUG: repo['repo_topics'] =", repo.get('repo_topics', '不存在'))
     print("DEBUG: repo['repo_languages'] =", repo.get('repo_languages', '不存在'))
 
-    # 用于调试的结构，记录每个信号源的明细
     contributions = {
         'repo_name': [],
         'repo_description': [],
@@ -404,7 +388,6 @@ def analyze_repository_with_weights(repo,
             total_l2[lvl2] += w
             total_l3[lvl3] += w
 
-            # 记录调试信息
             contributions[sig].append({
                 'kw': kw,
                 'mapped': (lvl1, lvl2, lvl3),
@@ -436,25 +419,60 @@ def analyze_repository_with_weights(repo,
     if isinstance(langs, str):
         langs = [langs]
 
+    # 把 repo_name、repo_description、repo_topics 拼成一个作为判断 lang 的上下文
+    ctx = " ".join([
+        repo.get('repo_name', '') or '',
+        repo.get('repo_description', '') or '',
+        *repo.get('repo_topics', [])
+    ]).lower()
+
     for lang in langs:
-        lang = lang.lower()
-        tfidf_lang = 1.0
+        lang_lower = lang.lower()
+
+        # 先算 TF-IDF 加权因子
+        tfidf_factor = 1.0
         if apply_tfidf and weight_normalizer.initialized:
-            tfidf_lang = weight_normalizer.get_tfidf_weight(lang, 1)
+            tfidf_factor = weight_normalizer.get_tfidf_weight(lang_lower, 1)
 
-        for lvl2 in LANGUAGE_TO_DOMAINS.get(lang, []):
+        candidate_l2s = LANGUAGE_TO_DOMAINS.get(lang_lower, [])
+        if not candidate_l2s:
+            continue
+
+        # 统计每个候选 L2 在 ctx 中关键词命中次数
+        l2_hits: Dict[str,int] = {}
+        for lvl2 in candidate_l2s:
             lvl1 = L2_TO_L1.get(lvl2)
-            base_w = LEVEL_WEIGHTS['language']
-            w = SIGNAL_WEIGHTS['language'] * base_w * tfidf_lang
+            kws = DOMAIN_HIERARCHY.get(lvl1, {}).get(lvl2, [])
+            # 在 ctx 中分别 count
+            hits = sum(ctx.count(kw.lower()) for kw in kws)
+            l2_hits[lvl2] = hits
 
+        total_hits = sum(l2_hits.values())
+
+        # 按命中比例或均分来分配这门语言的权重
+        for lvl2 in candidate_l2s:
+            lvl1 = L2_TO_L1.get(lvl2)
+            if total_hits > 0:
+                share = l2_hits[lvl2] / total_hits
+            else:
+                share = 1.0 / len(candidate_l2s)
+
+            w = SIGNAL_WEIGHTS['language'] \
+                * LEVEL_WEIGHTS['language'] \
+                * tfidf_factor \
+                * share
+
+            # 累加到全局 L1/L2
+            total_l2[lvl2] += w
             if lvl1:
                 total_l1[lvl1] += w
-            total_l2[lvl2] += w
 
             contributions['language'].append({
-                'language': lang,
+                'language': lang_lower,
                 'mapped': (lvl1, lvl2),
-                'weight': round(w, 4)
+                'weight': round(w, 4),
+                'hits': l2_hits[lvl2],
+                'share': round(share, 3)
             })
 
     logger.info(f"仓库 [{repo.get('repo_name')}] 信号源贡献明细：")
