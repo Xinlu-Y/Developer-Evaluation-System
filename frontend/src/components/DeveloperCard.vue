@@ -3,12 +3,16 @@
     <template #header>
       <div class="card-header">
         <div class="user-info">
-          <el-avatar :size="50" :src="`https://github.com/${developer.profile.用户名}.png`" class="avatar">
-            {{ developer.profile.用户名.charAt(0).toUpperCase() }}
+          <el-avatar
+            :size="50"
+            :src="developer.profile.avatar_url || `https://github.com/${developer.username}.png`"
+            class="avatar"
+          >
+            {{ developer.username ? developer.username.charAt(0).toUpperCase() : '' }}
           </el-avatar>
           <div class="user-details">
-            <h3>{{ developer.profile.用户名 }}</h3>
-            <p v-if="developer.profile.全名">{{ developer.profile.全名 }}</p>
+            <h3>{{ developer.username }}</h3>
+            <p v-if="developer.profile.name">{{ developer.profile.name }}</p>
           </div>
         </div>
         <div class="actions">
@@ -251,10 +255,12 @@ export default {
       return confidence ? Math.round(confidence * 100) + '%' : '0%';
     },
     openGithub() {
-      window.open(this.developer.profile['GitHub 个人主页'], '_blank');
+      const url = this.developer.profile.html_url 
+                   || `https://github.com/${this.developer.username}`
+      window.open(url, '_blank')
     },
     openRepo(repoName) {
-      const username = this.developer.profile.用户名;
+      const username = this.developer.username;
       window.open(`https://github.com/${username}/${repoName}`, '_blank');
     },
     togglePredictionDetails() {

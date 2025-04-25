@@ -82,7 +82,7 @@
           <transition-group name="list" tag="div" class="developer-list">
             <developer-card
               v-for="dev in developers"
-              :key="dev.profile.用户名"
+              :key="dev.username"
               :developer="dev"
             />
           </transition-group>

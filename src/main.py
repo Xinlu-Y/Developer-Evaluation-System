@@ -111,7 +111,7 @@ def get_developer_info(username):
         
         # 分析开发者技术领域
         try:
-            domains = get_developer_domains_weighted(username, user_repo,
+            domains = get_developer_domains_weighted(username, owner_repos,
                                                     apply_tfidf=True,
                                                     apply_softmax=True,
                                                     softmax_temp=0.5)
@@ -277,13 +277,13 @@ def search_by_domain():
             
             try:
                 # 使用新的国家预测功能
-                country_prediction = predict_developer_country(username)
-                
-                # 即使没有完整的profile_location，也尝试获取其他信息
-                user_repo = []
-                contribution_data = []
-                contribution_score = 0
-                total_stars = 0
+                # country_prediction = predict_developer_country(username)
+                country_prediction = {
+                    "profile_location": {},
+                    "prediction": {"predicted_country": "Unknown", "confidence": 0},
+                    "timezone_analysis": {},
+                    "language_culture": {}
+                }
                 
                 # 尝试获取仓库信息
                 try:
@@ -326,52 +326,14 @@ def search_by_domain():
                                                             apply_tfidf=True,
                                                             apply_softmax=True,
                                                             softmax_temp=0.5)
+                    language_character_stats = aggregate_language_characters(owner_repos)
                     logger.info(f"获取到用户 '{username}' 的技术领域: {domains}")
                 except Exception as e:
                     logger.warning(f"分析用户 '{username}' 的技术领域失败: {str(e)}")
                     domains = {}
                 
-                # 如果请求包含技能分析，尝试获取技术能力总结
-                skill_summary = None
-                if include_skills:
-                    try:
-                        from config import DOWNLOAD_DIR
-                        vector_store_path = os.path.join(DOWNLOAD_DIR, f"{username}_vector_store")
-                        
-                        # 检查是否已有向量存储，如果有则生成技术能力总结
-                        if os.path.exists(vector_store_path):
-                            logger.info(f"为开发者 '{username}' 预加载技术能力总结")
-                            
-                            # 使用简短的查询生成技术能力摘要
-                            queries = generate_search_queries("技术能力简介")
-                            all_results = []
-                            for q in queries[:2]:  # 只使用前两个查询，减少处理时间
-                                results = retrieve_relevant_information(username, q, top_k=5)  # 减少结果数量
-                                all_results.extend(results)
-                            
-                            # 去重并排序
-                            unique_contents = set()
-                            unique_results = []
-                            for result in all_results:
-                                content = result["content"]
-                                if content not in unique_contents:
-                                    unique_contents.add(content)
-                                    unique_results.append(result)
-                            
-                            sorted_results = sorted(unique_results, key=lambda x: x["score"])
-                            top_results = sorted_results[:5]  # 只取前5个结果
-                            
-                            # 生成简短的技术能力总结
-                            skill_summary_result = generate_skill_summary(username, top_results)
-                            skill_summary = skill_summary_result["summary"]
-                            model_name = skill_summary_result["model"]
-                        else:
-                            logger.info(f"开发者 '{username}' 没有向量存储，跳过技术能力总结生成")
-                    except Exception as e:
-                        logger.warning(f"为开发者 '{username}' 生成技术能力总结时发生错误: {str(e)}")
-                
-                # 即使部分数据缺失，也构建开发者信息
                 developer_info = {
+                    "username": username,
                     "profile": {} if not country_prediction else country_prediction.get("profile_location", {}),
                     "country_prediction": {"predicted_country": "Unknown", "confidence": 0} if not country_prediction else country_prediction.get("prediction", {}),
                     "timezone_analysis": {} if not country_prediction else country_prediction.get("timezone_analysis", {}),
@@ -380,14 +342,9 @@ def search_by_domain():
                     "contributions": member_repos,
                     "total_stars": total_stars,
                     "talent_rank_score": talent_rank_score,
-                    "domains": domains
+                    "domains": convert_numpy(domains),
+                    "language_character_stats" : language_character_stats
                 }
-                
-                # 添加技术能力总结（如果有）
-                if skill_summary:
-                    developer_info["skill_summary"] = skill_summary
-                    developer_info["model"] = model_name
-                
                 developers.append(developer_info)
             except Exception as e:
                 logger.error(f"处理开发者 {username} 时发生错误: {str(e)}", exc_info=True)
