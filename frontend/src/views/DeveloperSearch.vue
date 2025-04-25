@@ -24,6 +24,8 @@
             <developer-card
               v-if="developer"
               :developer="developer"
+              :hide-country-prediction="true"
+              :hide-skill-summary="true"
             />
           </transition>
         </el-tab-pane>
@@ -84,6 +86,8 @@
               v-for="dev in developers"
               :key="dev.username"
               :developer="dev"
+                :hide-country-prediction="true"
+                :hide-skill-summary="true"
             />
           </transition-group>
 

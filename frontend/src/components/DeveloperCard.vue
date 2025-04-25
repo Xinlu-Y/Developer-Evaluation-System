@@ -39,19 +39,21 @@
         </div>
       </div>
 
-      <el-divider></el-divider>
-
+      <template v-if="!hideCountryPrediction">
+      <el-divider />
       <div class="info-section">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="国家">
-            <el-tag size="small" v-if="developer.profile.国家">{{ developer.profile.国家 }}</el-tag>
+            <el-tag size="small" v-if="developer.profile.location">
+              {{ developer.profile.location }}
+            </el-tag>
             <span v-else>当前位置未公开，我们可以预测看看🤔</span>
           </el-descriptions-item>
         </el-descriptions>
       </div>
 
       <!-- 国家预测结果 -->
-      <div v-if="!developer.profile.国家 && developer.country_prediction" class="section">
+      <div v-if="!developer.profile.location && developer.country_prediction" class="section">
         <div class="section-header">
           <h4>国家预测</h4>
           <el-tag :type="getPredictionTagType(developer.country_prediction.confidence)" size="small">
@@ -77,12 +79,14 @@
             <div v-if="showDetails" class="prediction-details">
               <div v-for="(score, country) in developer.country_prediction.country_scores" :key="country" class="evidence-item">
                 <span class="country-code">{{ getCountryName(country) }}:</span>
-                <el-progress :percentage="getPercentage(score)" :color="getColorByScore(score)" :format="(percentage) => `${percentage}%`"></el-progress>
+                <el-progress :percentage="getPercentage(score)" :color="getColorByScore(score)" :format="(pct) => `${pct}%`"></el-progress>
               </div>
             </div>
           </el-descriptions-item>
         </el-descriptions>
       </div>
+    </template>
+
 
       <!-- 领域分析 -->
       <div v-if="hasDomainData" class="section">
@@ -152,18 +156,19 @@
       </div>
 
       <!-- 技术能力总结 -->
-      <div class="section">
+      <template v-if="!hideSkillSummary">
+        <div class="section">
         <div class="section-header">
           <h4>技术能力总结</h4>
           <div class="section-actions">
             <el-tag type="primary" v-if="developer.skill_summary" class="model-tag">
               {{ developer.model || 'AI' }}生成
             </el-tag>
-            <el-button 
-              v-else 
-              type="primary" 
-              size="small" 
-              @click="generateSkillSummary" 
+            <el-button   
+              v-else   
+              type="primary"   
+              size="small"   
+              @click="generateSkillSummary"   
               :loading="loadingSkills"
               class="generate-btn"
             >
@@ -172,7 +177,7 @@
             </el-button>
           </div>
         </div>
-        
+
         <div v-if="developer.skill_summary" class="skill-summary">
           <div class="skill-content" v-html="formattedSkillSummary"></div>
           <div v-if="isStreaming" class="streaming-indicator">
@@ -181,14 +186,14 @@
             <span class="dot"></span>
           </div>
         </div>
-        
+
         <div v-else-if="loadingSkills" class="skill-summary-loading">
           <el-skeleton :rows="6" animated />
         </div>
-        
+
         <div v-else class="skill-summary-empty">
-          <el-empty 
-            description="点击上方按钮生成开发者技术能力总结" 
+          <el-empty   
+            description="点击上方按钮生成开发者技术能力总结"   
             :image-size="100"
           >
             <template #image>
@@ -196,7 +201,8 @@
             </template>
           </el-empty>
         </div>
-      </div>
+        </div>
+      </template>
     </div>
   </el-card>
 </template>
@@ -218,10 +224,9 @@ export default {
     Document
   },
   props: {
-    developer: {
-      type: Object,
-      required: true
-    }
+    developer: { type: Object, required: true },
+    hideCountryPrediction: { type: Boolean, default: false },
+    hideSkillSummary:    { type: Boolean, default: false }
   },
   data() {
     return {
