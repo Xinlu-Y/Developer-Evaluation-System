@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import logging
 from datetime import datetime
+import json
 from contribution_analysis import calculate_talent_rank, evaluate_overall_contribution, get_user_contributed_repos
 from country_prediction import predict_developer_country
 from domain_analysis import get_developer_domains_weighted, convert_numpy, aggregate_language_characters
@@ -116,7 +117,7 @@ def get_developer_info(username):
                                                     apply_softmax=True,
                                                     softmax_temp=0.5)
             language_character_stats = aggregate_language_characters(owner_repos)
-            logger.info(f"获取到用户 '{username}' 的技术领域: {domains}")
+            logger.info(f"用户 '{username}' 的技术领域详细信息:\n{json.dumps(convert_numpy(domains), indent=2, ensure_ascii=False)}")
         except Exception as e:
             logger.warning(f"分析用户 '{username}' 的技术领域失败: {str(e)}")
             domains = {}
@@ -293,7 +294,9 @@ def search_by_domain():
                     logger.info(f"获取到 {username} 的仓库信息: {len(user_repo)} 个仓库")
                 except Exception as e:
                     logger.warning(f"获取 {username} 的仓库信息失败: {str(e)}")
-                
+                    owner_repos = []
+                    member_repos = []
+
                 # 尝试获取贡献信息
                 try:
                     contribution_data = get_user_contributed_repos(username)
@@ -327,10 +330,11 @@ def search_by_domain():
                                                             apply_softmax=True,
                                                             softmax_temp=0.5)
                     language_character_stats = aggregate_language_characters(owner_repos)
-                    logger.info(f"获取到用户 '{username}' 的技术领域: {domains}")
+                    logger.info(f"用户 '{username}' 的技术领域详细信息:\n{json.dumps(convert_numpy(domains), indent=2, ensure_ascii=False)}")
                 except Exception as e:
                     logger.warning(f"分析用户 '{username}' 的技术领域失败: {str(e)}")
                     domains = {}
+                    language_character_stats = {}
                 
                 developer_info = {
                     "username": username,
@@ -358,7 +362,8 @@ def search_by_domain():
                     "contributions": [],
                     "total_stars": 0,
                     "talent_rank_score": 0,
-                    "domains": {}
+                    "domains": {},
+                    "language_character_stats" : {}
                 })
         
         # 按TalentRank评分排序（只排序当前页的数据）
