@@ -40,17 +40,11 @@
               <el-input v-model="domainSearch.topic" placeholder="如: machine-learning, web" />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" @click="searchByDomain" :loading="loading">搜索</el-button>
+              <div class="domain-search-btn-wrapper">
+                <el-button type="primary" @click="searchByDomain" :loading="loading">搜索</el-button>
+              </div>
             </el-form-item>
           </el-form>
-
-          <!-- 高级选项 -->
-          <div class="advanced-options">
-            <el-checkbox v-model="domainSearch.includeSkills" label="包含技术能力总结" border />
-            <el-tooltip content="启用此选项将尝试为每个开发者生成技术能力总结，可能会增加搜索时间" placement="top">
-              <el-icon class="info-icon"><InfoFilled /></el-icon>
-            </el-tooltip>
-          </div>
 
           <!-- 添加加载状态显示 -->
           <div v-if="loading" class="loading-state">
@@ -73,7 +67,7 @@
           <!-- 搜索结果统计 -->
           <div v-if="!loading && searchTime" class="search-stats">
             <el-alert
-              :title="`搜索完成！用时 ${searchTime} 秒，共找到 ${total} 个开发者`"
+              :title="`搜索完成！共找到 ${total} 个开发者`"
               type="success"
               :closable="false"
               show-icon
@@ -112,14 +106,13 @@ import { ref, reactive } from 'vue'
 import { getDeveloperInfo, searchByDomain as searchByDomainAPI } from '../api/github'
 import DeveloperCard from '../components/DeveloperCard.vue'
 import { ElMessage } from 'element-plus'
-import { Loading, InfoFilled } from '@element-plus/icons-vue'
+import { Loading } from '@element-plus/icons-vue'
 
 export default {
   name: 'DeveloperSearch',
   components: {
     DeveloperCard,
-    Loading,
-    InfoFilled
+    Loading
   },
   setup() {
     const activeTab = ref('username')
@@ -134,8 +127,7 @@ export default {
     
     const domainSearch = reactive({
       language: '',
-      topic: '',
-      includeSkills: false
+      topic: ''
     })
 
     const searchByUsername = async () => {
@@ -205,7 +197,6 @@ export default {
           topic: domainSearch.topic,
           offset: (currentPage.value - 1) * pageSize.value,
           limit: pageSize.value,
-          include_skills: domainSearch.includeSkills
         })
         
         if (response && response.data) {
@@ -395,6 +386,12 @@ export default {
   border-color: rgba(55, 53, 47, 0.85);
 }
 
+.domain-search-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .domain-form {
   margin: 48px auto;
   max-width: 900px;
@@ -402,6 +399,22 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 24px;
+}
+
+.domain-form :deep(.el-button) {
+  background-color: rgb(55, 53, 47);
+  border-color: rgb(55, 53, 47);
+  color: #ffffff;
+  padding: 12px 28px;
+  font-size: 16px;
+  border-radius: 10px;
+  height: 48px;
+  min-width: 140px;
+}
+
+.domain-form :deep(.el-button:hover) {
+  background-color: rgba(55, 53, 47, 0.85);
+  border-color: rgba(55, 53, 47, 0.85);
 }
 
 .domain-form :deep(.el-form-item) {
@@ -504,6 +517,7 @@ export default {
   max-width: 1200px;
   padding: 0 32px;
   display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 32px;
 }
 
