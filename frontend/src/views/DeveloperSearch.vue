@@ -24,8 +24,8 @@
             <developer-card
               v-if="developer"
               :developer="developer"
-              :hide-country-prediction="true"
-              :hide-skill-summary="true"
+              :hide-country-prediction="flase"
+              :hide-skill-summary="flase"
             />
           </transition>
         </el-tab-pane>
@@ -121,7 +121,7 @@ export default {
     const developers = ref([])
     const total = ref(0)
     const currentPage = ref(1)
-    const pageSize = ref(5)
+    const pageSize = ref(2)
     const loading = ref(false)
     const searchTime = ref('')
     
