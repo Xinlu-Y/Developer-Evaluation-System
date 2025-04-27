@@ -114,6 +114,13 @@ function renderRadar() {
   const maxScale = Math.max(...entries.map(i => i.value)) * 1.2
 
   const option = {
+    toolbox: {
+      feature: {
+        saveAsImage: {}
+      },
+      right: 20,
+      top: 20
+    },
     color: colorPalette,
     title: {
       text: t('radar_title'), left: 'left', top: 10,
@@ -131,10 +138,14 @@ function renderRadar() {
       }
     },
     radar: {
-      shape: 'polygon', splitNumber: 5,
+      shape: 'polygon', 
+      splitNumber: 4,
+      center: ['50%', '50%'],
+      radius: '65%',
       axisLine:  { lineStyle: { color: '#ddd' } },
       splitLine: { lineStyle: { color: '#ddd' } },
-      axisName:  { color:'#333', fontSize:14 },
+      axisName:  { color:'#333', fontSize:14, gap: 10 },
+      nameGap: 10,
       indicator: labels.map(name => ({ name, max: maxScale }))
     },
     series: [{
