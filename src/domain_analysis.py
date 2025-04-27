@@ -43,112 +43,521 @@ logger = logging.getLogger(__name__)
 DOMAIN_HIERARCHY = {
     'Software Development': {
         'Frontend': [
-            'React', 'Vue.js', 'Angular', 'JavaScript', 'TypeScript', 'HTML5', 'CSS3',
-            'Tailwind CSS', 'Bootstrap', 'Sass', 'Redux', 'Webpack', 'Vite', 'Next.js',
-            'Nuxt.js', 'PWA', 'WebAssembly', 'SVG', 'D3.js', 'Three.js', 'jQuery'
+            'React',
+            'Vue.js',
+            'Angular',
+            'JavaScript',
+            'TypeScript',
+            'HTML5',
+            'CSS3',
+            'Tailwind CSS',
+            'Bootstrap',
+            'Sass',
+            'Redux',
+            'Webpack',
+            'Vite',
+            'Next.js',
+            'Nuxt.js',
+            'PWA',
+            'WebAssembly',
+            'SVG',
+            'Three.js',
+            'jQuery',
+            'Svelte'
         ],
         'Backend': [
-            'Node.js', 'Express', 'Django', 'Flask', 'Spring Boot', 'Laravel', 'Rails',
-            'ASP.NET', 'FastAPI', 'GraphQL', 'REST API', 'gRPC', 'OAuth', 'JWT',
-            'Microservices', 'Serverless', 'WebSockets', 'RabbitMQ', 'Kafka', 'Redis'
+            'Node.js',
+            'Express',
+            'Django',
+            'Flask',
+            'Spring Boot',
+            'Laravel',
+            'Rails',
+            'ASP.NET',
+            'FastAPI',
+            'GraphQL',
+            'REST API',
+            'gRPC',
+            'Microservices',
+            'WebSockets',
+            'RabbitMQ'
         ],
         'Mobile': [
-            'iOS', 'Android', 'Swift', 'Kotlin', 'React Native', 'Flutter', 'Xamarin',
-            'Ionic', 'SwiftUI', 'Jetpack Compose', 'ARKit', 'Firebase', 'CoreML',
-            'Mobile UI', 'Push Notifications', 'AppClip'
+            'iOS',
+            'Android',
+            'Swift',
+            'Objective-C',
+            'Kotlin',
+            'React Native',
+            'Flutter',
+            'Xamarin',
+            'Ionic',
+            'SwiftUI',
+            'Jetpack Compose',
+            'Firebase',
+            'CoreML',
+            'Mobile UI',
+            'Push Notifications',
+            'AppClip'
         ],
         'GameDev': [
-            'Unity', 'Unreal', 'Godot', 'Cocos2d', 'Phaser', 'Game AI', 'Physics Engine',
-            'Shaders', 'Procedural Gen', 'Networking', 'VFX', 'Animation', 'C#', 'C++',
-            'Blender', 'Collision Detection', '2D Games', '3D Games'
+            'Unity',
+            'Unreal',
+            'Godot',
+            'Cocos2d',
+            'Phaser',
+            'Game AI',
+            'Physics Engine',
+            'Shaders',
+            'Procedural Gen',
+            'Networking',
+            'VFX',
+            'Animation',
+            'C#',
+            'Blender',
+            'Collision Detection',
+            '2D Games',
+            '3D Games'
         ],
         'Cross-platform': [
-            'Electron', 'Tauri', 'PWA', 'React Native', 'Flutter', 'Qt', 'MAUI',
-            'UWP', 'NativeScript', 'Capacitor', 'Cordova', 'Xamarin'
+            'Electron',
+            'Tauri',
+            'Qt',
+            'MAUI',
+            'UWP',
+            'NativeScript',
+            'Capacitor',
+            'Cordova'
+        ],
+        'Testing': [
+            'Unit Testing',
+            'Integration Testing',
+            'TDD',
+            'Selenium',
+            'Cypress',
+            'Jest',
+            'JUnit',
+            'PyTest',
+            'Load Testing',
+            'Mocha'
         ]
     },
 
     'AI': {
         'Machine Learning': [
-            'scikit-learn', 'XGBoost', 'LightGBM', 'CatBoost', 'SVM', 'Random Forest',
-            'Neural Networks', 'Feature Engineering', 'Hyperparam Tuning', 'AutoML',
-            'Regression', 'Classification', 'Clustering', 'Anomaly Detection',
-            'Bayesian Methods', 'Time Series'
+            'scikit-learn',
+            'XGBoost',
+            'LightGBM',
+            'CatBoost',
+            'SVM',
+            'Random Forest',
+            'Neural Networks',
+            'Feature Engineering',
+            'Hyperparam Tuning',
+            'AutoML',
+            'Regression',
+            'Classification',
+            'Clustering',
+            'Anomaly Detection',
+            'Bayesian Methods',
+            'Time Series'
         ],
         'NLP': [
-            'BERT', 'GPT', 'LLM', 'Transformers', 'Word2Vec', 'spaCy', 'NLTK',
-            'HuggingFace', 'NER', 'Sentiment Analysis', 'Machine Translation',
-            'Text Gen', 'QA', 'Summarization', 'Topic Modeling', 'RAG', 'Tokenization'
+            'BERT',
+            'GPT',
+            'LLM',
+            'Transformers',
+            'Word2Vec',
+            'spaCy',
+            'NLTK',
+            'HuggingFace',
+            'NER',
+            'Sentiment Analysis',
+            'Machine Translation',
+            'Text Gen',
+            'QA',
+            'Summarization',
+            'Topic Modeling',
+            'RAG',
+            'Tokenization'
         ],
         'Computer Vision': [
-            'OpenCV', 'YOLO', 'CNN', 'GANs', 'Object Detection', 'Segmentation',
-            'Face Recognition', 'Pose Estimation', 'OCR', 'Medical Imaging', 'AR',
-            '3D Reconstruction', 'Transfer Learning', 'Image Gen', 'Feature Extraction'
+            'OpenCV',
+            'YOLO',
+            'CNN',
+            'Object Detection',
+            'Segmentation',
+            'Face Recognition',
+            'Pose Estimation',
+            'OCR',
+            'Medical Imaging',
+            '3D Reconstruction',
+            'Transfer Learning',
+            'Image Gen',
+            'Feature Extraction'
         ],
         'Reinforcement Learning': [
-            'Q-Learning', 'DQN', 'PPO', 'DDPG', 'A3C', 'OpenAI Gym', 'MuJoCo',
-            'Multi-agent', 'Policy Gradient', 'Actor-Critic', 'MDP', 'Sim2Real'
+            'Q-Learning',
+            'DQN',
+            'PPO',
+            'DDPG',
+            'A3C',
+            'OpenAI Gym',
+            'MuJoCo',
+            'Multi-agent',
+            'Policy Gradient',
+            'Actor-Critic',
+            'MDP',
+            'Sim2Real'
         ],
         'Generative AI': [
-            'Stable Diffusion', 'DALL-E', 'Midjourney', 'GANs', 'VAE', 'Diffusion Models',
-            'Text-to-Image', 'Text-to-Video', 'Voice Synthesis', 'Music Gen',
-            'Style Transfer', 'Inpainting', 'Promptcraft', 'ControlNet', 'LoRA'
+            'Stable Diffusion',
+            'DALL-E',
+            'Midjourney',
+            'GANs',
+            'VAE',
+            'Diffusion Models',
+            'Text-to-Image',
+            'Text-to-Video',
+            'Voice Synthesis',
+            'Music Gen',
+            'Style Transfer',
+            'Inpainting',
+            'Promptcraft',
+            'ControlNet',
+            'LoRA'
         ]
     },
 
     'Data Science': {
         'Data Analysis': [
-            'Pandas', 'NumPy', 'SQL', 'R', 'EDA', 'Statistical Analysis', 'Hypothesis Testing',
-            'A/B Testing', 'Time Series', 'Regression Analysis', 'Excel', 'Feature Engineering',
-            'Sampling Methods', 'Bayesian Analysis'
+            'Pandas',
+            'NumPy',
+            'SQL',
+            'R',
+            'EDA',
+            'Statistical Analysis',
+            'Hypothesis Testing',
+            'A/B Testing',
+            'Regression Analysis',
+            'Excel',
+            'Sampling Methods',
+            'Bayesian Analysis'
         ],
         'Visualization': [
-            'Matplotlib', 'Seaborn', 'Plotly', 'D3.js', 'Tableau', 'Power BI', 'Grafana',
-            'Kibana', 'Network Graphs', 'Dashboards', 'Geospatial Vis', 'Infographics',
-            'ECharts', 'Heatmaps', 'Visual Storytelling'
+            'Matplotlib',
+            'Seaborn',
+            'Plotly',
+            'D3.js',
+            'Tableau',
+            'Power BI',
+            'Grafana',
+            'Kibana',
+            'Network Graphs',
+            'Dashboards',
+            'Geospatial Vis',
+            'Infographics',
+            'ECharts',
+            'Heatmaps',
+            'Visual Storytelling'
         ],
         'Big Data': [
-            'Hadoop', 'Spark', 'Flink', 'MapReduce', 'Hive', 'Presto', 'Kafka',
-            'Druid', 'Storm', 'Beam', 'Distributed Computing', 'Columnar Storage',
-            'Batch Processing', 'Stream Processing'
+            'Hadoop',
+            'Spark',
+            'Flink',
+            'MapReduce',
+            'Hive',
+            'Presto',
+            'Kafka',
+            'Druid',
+            'Storm',
+            'Beam',
+            'Distributed Computing',
+            'Columnar Storage',
+            'Batch Processing',
+            'Stream Processing'
         ],
         'Data Engineering': [
-            'ETL', 'Airflow', 'dbt', 'Dagster', 'Data Lake', 'Snowflake',
-            'Data Warehouse', 'Data Pipeline', 'Schema Design', 'Data Governance',
-            'Metadata Management', 'Delta Lake', 'Data Quality', 'Data Lineage'
+            'ETL',
+            'Airflow',
+            'dbt',
+            'Dagster',
+            'Data Lake',
+            'Snowflake',
+            'Data Warehouse',
+            'Data Pipeline',
+            'Schema Design',
+            'Data Governance',
+            'Metadata Management',
+            'Delta Lake',
+            'Data Quality',
+            'Data Lineage'
         ]
     },
 
     'Systems & Infrastructure': {
         'Cloud': [
-            'AWS', 'Azure', 'GCP', 'Cloud Native', 'Serverless', 'IaaS', 'PaaS', 'SaaS',
-            'Cloud Security', 'Cloud Storage', 'Hybrid Cloud', 'Cloud Migration', 'K8s'
+            'AWS',
+            'Azure',
+            'GCP',
+            'Cloud Native',
+            'Serverless',
+            'IaaS',
+            'PaaS',
+            'SaaS',
+            'Cloud Security',
+            'Cloud Storage',
+            'Hybrid Cloud',
+            'Cloud Migration',
+            'OpenStack'
         ],
         'DevOps': [
-            'CI/CD', 'Jenkins', 'GitHub Actions', 'Docker', 'Kubernetes', 'Terraform',
-            'Ansible', 'Infrastructure as Code', 'Monitoring', 'Logging', 'GitOps', 'SRE'
+            'CI/CD',
+            'Jenkins',
+            'GitHub Actions',
+            'Docker',
+            'Kubernetes',
+            'Terraform',
+            'Ansible',
+            'Infrastructure as Code',
+            'Monitoring',
+            'Logging',
+            'GitOps',
+            'SRE'
         ],
         'Systems Programming': [
-            'C', 'C++', 'Rust', 'Go', 'Assembly', 'Linux Kernel', 'Embedded Systems',
-            'Device Drivers', 'Concurrency', 'Memory Management', 'IPC', 'POSIX',
-            'File Systems', 'Low-level Optimization'
+            'C',
+            'C++',
+            'Rust',
+            'Go',
+            'Assembly',
+            'Linux Kernel',
+            'Embedded Systems',
+            'Device Drivers',
+            'Concurrency',
+            'Memory Management',
+            'IPC',
+            'POSIX',
+            'File Systems',
+            'Low-level Optimization'
         ],
         'Databases': [
-            'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Cassandra',
-            'SQL Server', 'SQLite', 'DynamoDB', 'Indexing', 'Query Optimization',
-            'Sharding', 'Replication', 'ACID'
+            'MySQL',
+            'PostgreSQL',
+            'MongoDB',
+            'Redis',
+            'Elasticsearch',
+            'Cassandra',
+            'SQL Server',
+            'SQLite',
+            'DynamoDB',
+            'Indexing',
+            'Query Optimization',
+            'Sharding',
+            'Replication',
+            'ACID'
         ],
         'Networking': [
-            'TCP/IP', 'HTTP', 'gRPC', 'WebSockets', 'DNS', 'QUIC', 'VPN', 'Proxy',
-            'CDN', 'Load Balancing', 'Network Protocols', 'Firewall', 'IPv6', 'Packet Analysis'
+            'TCP/IP',
+            'HTTP',
+            'DNS',
+            'QUIC',
+            'Proxy',
+            'CDN',
+            'Load Balancing',
+            'Network Protocols',
+            'IPv6',
+            'Packet Analysis',
+            'Routing',
+            'BGP'
         ]
     },
 
     'Cybersecurity': {
-        'AppSec': ['OWASP', 'XSS', 'CSRF', 'SQL Injection', 'JWT', 'OAuth', 'SAST', 'DAST'],
-        'Network Security': ['Firewall', 'IDS', 'IPS', 'VPN', 'Wireshark', 'DDoS', 'SIEM'],
-        'Cryptography': ['RSA', 'AES', 'SSL/TLS', 'PKI', 'Blockchain', 'Quantum Crypto', 'ZKP'],
-        'SecOps': ['Incident Response', 'Threat Hunting', 'Vulnerability Mgmt', 'SOC', 'Forensics']
+        'AppSec': [
+            'OWASP',
+            'XSS',
+            'CSRF',
+            'SQL Injection',
+            'JWT',
+            'OAuth',
+            'SAST',
+            'DAST',
+            'Clickjacking',
+            'RCE'
+        ],
+        'Network Security': [
+            'Firewall',
+            'IDS',
+            'IPS',
+            'VPN',
+            'Wireshark',
+            'DDoS',
+            'WAF',
+            'Port Scanning'
+        ],
+        'Cryptography': [
+            'RSA',
+            'AES',
+            'SSL/TLS',
+            'PKI',
+            'Quantum Crypto',
+            'ZKP',
+            'SHA-256',
+            'Elliptic Curve',
+            'Diffie-Hellman',
+            'Homomorphic Encryption'
+        ],
+        'SecOps': [
+            'Incident Response',
+            'Threat Hunting',
+            'Vulnerability Mgmt',
+            'SOC',
+            'Forensics',
+            'SIEM',
+            'Threat Intelligence',
+            'Red Team',
+            'Blue Team',
+            'SOAR'
+        ],
+        'Pentesting': [
+            'Metasploit',
+            'Nmap',
+            'Burp Suite',
+            'Social Engineering',
+            'Exploit Development',
+            'Reverse Engineering',
+            'Privilege Escalation',
+            'Buffer Overflow',
+            'Kali Linux',
+            'OSINT'
+        ]
+    },
+
+    'Blockchain': {
+        'Cryptocurrency': [
+            'Bitcoin',
+            'Ethereum',
+            'Litecoin',
+            'Monero',
+            'Wallets',
+            'Mining',
+            'Proof-of-Work',
+            'Proof-of-Stake',
+            'Consensus',
+            'Lightning Network'
+        ],
+        'Smart Contracts': [
+            'Solidity',
+            'Vyper',
+            'EVM',
+            'Truffle',
+            'Hardhat',
+            'Web3.js',
+            'Remix IDE',
+            'Smart Contract Audit',
+            'Hyperledger',
+            'Chaincode'
+        ],
+        'Web3 & DeFi': [
+            'NFT',
+            'Metaverse',
+            'Decentralized Exchange',
+            'DAO',
+            'Yield Farming',
+            'Staking',
+            'Liquidity Pool',
+            'Stablecoins',
+            'Metamask',
+            'GameFi'
+        ]
+    },
+
+    'Emerging Tech': {
+        'AR/VR': [
+            'ARKit',
+            'ARCore',
+            'HoloLens',
+            'Oculus',
+            'OpenXR',
+            'WebXR',
+            'A-Frame',
+            'Mixed Reality',
+            'Vuforia',
+            'Magic Leap'
+        ],
+        'Robotics': [
+            'ROS',
+            'Gazebo',
+            'SLAM',
+            'LIDAR',
+            'Autonomous Navigation',
+            'Robotic Arm',
+            'Drones',
+            'Actuators',
+            'PID Control',
+            'Swarm Robotics'
+        ],
+        'Quantum Computing': [
+            'Qubits',
+            'Superposition',
+            'Entanglement',
+            'Quantum Algorithms',
+            'Qiskit',
+            'Cirq',
+            'Q#',
+            'Quantum Supremacy',
+            'Quantum Error Correction',
+            'Quantum Cryptography'
+        ],
+        'Bioinformatics': [
+            'Genomics',
+            'Proteomics',
+            'DNA Sequencing',
+            'Genome Assembly',
+            'BLAST',
+            'Bioconductor',
+            'Protein Folding',
+            'Gene Expression',
+            'Molecular Dynamics',
+            'Phylogenetics'
+        ],
+        'Edge Computing': [
+            'Fog Computing',
+            'MEC',
+            'Edge AI',
+            'IoT Gateway',
+            '5G',
+            'Latency Optimization',
+            'Edge Devices',
+            'Cloudlet',
+            'Nvidia Jetson',
+            'AWS Greengrass'
+        ],
+        'Internet of Things': [
+            'Arduino',
+            'Raspberry Pi',
+            'Microcontrollers',
+            'MQTT',
+            'Zigbee',
+            'Smart Home',
+            'Wearables',
+            'IoT Security',
+            'M2M',
+            'Sensors'
+        ],
+        'No-Code Platforms': [
+            'Zapier',
+            'IFTTT',
+            'Airtable',
+            'Webflow',
+            'Bubble',
+            'Wix',
+            'PowerApps',
+            'AppSheet',
+            'Retool',
+            'Mendix'
+        ]
     }
 }
 
@@ -158,7 +567,7 @@ LANGUAGE_TO_DOMAINS = {
     'python': ['Backend', 'Machine Learning', 'NLP', 'Computer Vision', 'Data Analysis'],
     'java': ['Backend', 'Mobile', 'Systems Programming'],
     'c++': ['GameDev', 'Systems Programming'],
-    'c#': ['GameDev', 'Cross-platform'],
+    'c#': ['GameDev', 'Cross-platform', 'Backend'],
     'go': ['Backend', 'Systems Programming'],
     'rust': ['Systems Programming'],
     'r': ['Data Analysis'],
@@ -167,7 +576,20 @@ LANGUAGE_TO_DOMAINS = {
     'html': ['Frontend'],
     'css': ['Frontend'],
     'typescript': ['Frontend', 'Backend'],
+    'c': ['Systems Programming'],
+    'php': ['Backend'],
+    'ruby': ['Backend'],
+    'swift': ['Mobile'],
+    'kotlin': ['Mobile'],
+    'dart': ['Mobile', 'Cross-platform'],
+    'solidity': ['Smart Contracts'],
+    'scala': ['Big Data', 'Backend'],
+    'julia': ['Machine Learning', 'Data Analysis'],
+    'matlab': ['Data Analysis'],
+    'lua': ['GameDev'],
+    'objective-c': ['Mobile']
 }
+
 
 # --- 构建映射表 ---
 L3_TO_L2 = {}
@@ -429,7 +851,11 @@ def analyze_repository_with_weights(repo,
     for lang in langs:
         lang_lower = lang.lower()
 
-        # 先算 TF-IDF 加权因子
+        m = match_domain_for_keyword_extended(lang_lower, VECTOR_MATCHER)
+        matched_lvl1 = matched_lvl2 = matched_lvl3 = None
+        if m:
+            matched_lvl1, matched_lvl2, matched_lvl3, base_w = m
+
         tfidf_factor = 1.0
         if apply_tfidf and weight_normalizer.initialized:
             tfidf_factor = weight_normalizer.get_tfidf_weight(lang_lower, 1)
@@ -439,17 +865,15 @@ def analyze_repository_with_weights(repo,
             continue
 
         # 统计每个候选 L2 在 ctx 中关键词命中次数
-        l2_hits: Dict[str,int] = {}
+        l2_hits: Dict[str, int] = {}
         for lvl2 in candidate_l2s:
             lvl1 = L2_TO_L1.get(lvl2)
             kws = DOMAIN_HIERARCHY.get(lvl1, {}).get(lvl2, [])
-            # 在 ctx 中分别 count
             hits = sum(ctx.count(kw.lower()) for kw in kws)
             l2_hits[lvl2] = hits
 
         total_hits = sum(l2_hits.values())
 
-        # 按命中比例或均分来分配这门语言的权重
         for lvl2 in candidate_l2s:
             lvl1 = L2_TO_L1.get(lvl2)
             if total_hits > 0:
@@ -462,13 +886,17 @@ def analyze_repository_with_weights(repo,
                 * tfidf_factor \
                 * share
 
-            # 累加到全局 L1/L2
             total_l2[lvl2] += w
             if lvl1:
                 total_l1[lvl1] += w
 
+            kws_in_lvl2 = DOMAIN_HIERARCHY.get(lvl1, {}).get(lvl2, [])
+            if lang_lower in [kw.lower() for kw in kws_in_lvl2]:
+                total_l3[lang_lower] += w
+
             contributions['language'].append({
                 'language': lang_lower,
+                'matched_l3': matched_lvl3,
                 'mapped': (lvl1, lvl2),
                 'weight': round(w, 4),
                 'hits': l2_hits[lvl2],
@@ -483,7 +911,7 @@ def analyze_repository_with_weights(repo,
         logger.info(f"  - {sig}:")
         for e in entries:
             if sig == 'language':
-                logger.info(f"      · {e['language']} → L1={e['mapped'][0]}, L2={e['mapped'][1]}, w={e['weight']}")
+                logger.info(f"      · {e['language']} → L1={e['mapped'][0]}, L2={e['mapped'][1]}, matched L3={e.get('matched_l3', '无')}, w={e['weight']}")
             else:
                 key = e.get('kw') or e.get('topic')
                 logger.info(f"      · “{key}” → L1={e['mapped'][0]}, L2={e['mapped'][1]}, L3={e['mapped'][2]}, w={e['weight']}")
