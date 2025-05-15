@@ -44,8 +44,8 @@
       <div class="info-section">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="国家">
-            <el-tag size="small" v-if="developer.profile.location">
-              {{ developer.profile.location }}
+            <el-tag size="small" v-if="developer.profile.国家">
+              {{ developer.profile.国家 }}
             </el-tag>
             <span v-else>当前位置未公开，我们可以预测看看🤔</span>
           </el-descriptions-item>
@@ -53,7 +53,7 @@
       </div>
 
       <!-- 国家预测结果 -->
-      <div v-if="!developer.profile.location && developer.country_prediction" class="section">
+      <div v-if="!developer.profile.国家 && developer.country_prediction" class="section">
         <div class="section-header">
           <h4>国家预测</h4>
           <el-tag :type="getPredictionTagType(developer.country_prediction.confidence)" size="small">

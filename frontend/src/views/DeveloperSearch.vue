@@ -67,7 +67,7 @@
           <!-- 搜索结果统计 -->
           <div v-if="!loading && searchTime" class="search-stats">
             <el-alert
-              :title="`搜索完成！共找到 ${total} 个开发者`"
+              :title="`搜索完成！`"
               type="success"
               :closable="false"
               show-icon
@@ -121,7 +121,7 @@ export default {
     const developers = ref([])
     const total = ref(0)
     const currentPage = ref(1)
-    const pageSize = ref(2)
+    const pageSize = ref(4)
     const loading = ref(false)
     const searchTime = ref('')
     

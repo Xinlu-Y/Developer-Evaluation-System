@@ -49,9 +49,9 @@ const t = (key) => {
     'radar_title': { en: ' ', zh: ' ' },
     'language_chars': { en: 'Character Count (bytes)', zh: '字符数 (bytes)' },
     'domain_distribution': { en: 'Domain Distribution', zh: '领域分布' },
-    'wordcloud_title': { en: 'Technology Domain Word Cloud', zh: '技术领域词云' },
-    'wordcloud_subtitle': { en: '(Size indicates importance)', zh: '(大小表示重要性)' },
-    'sankey_title': { en: 'Domain Hierarchy Flow (Sankey)', zh: '领域层级流向图 (Sankey)' },
+    'wordcloud_title': { en: ' ', zh: ' ' },
+    'wordcloud_subtitle': { en: ' ', zh: ' ' },
+    'sankey_title': { en: ' ', zh: ' ' },
     'score': { en: 'Score', zh: '得分' },
     'no_language_data': { en: 'No language data available', zh: '没有可用的语言数据' }
   }
@@ -357,6 +357,7 @@ function renderSankey() {
         color: '#333'
       }
     },
+    grid: { left:'8S%', right:'8%', top:'10%', bottom:'10%' },
     toolbox: {
       feature: {
         saveAsImage: {}
