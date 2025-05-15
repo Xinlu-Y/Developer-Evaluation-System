@@ -1,19 +1,40 @@
 import os
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+import json
 import logging
 from datetime import datetime
-import json
-from contribution_analysis import calculate_talent_rank, evaluate_overall_contribution, get_user_contributed_repos
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from flask_caching import Cache
+
+from langsmith import Client, traceable
+from langsmith.utils import LangSmithConflictError
+
+from contribution_analysis import (
+    calculate_talent_rank,
+    evaluate_overall_contribution,
+    get_user_contributed_repos
+)
 from country_prediction import predict_developer_country
-from domain_analysis import get_developer_domains_weighted, convert_numpy, aggregate_language_characters
+from domain_analysis import (
+    get_developer_domains_weighted,
+    convert_numpy,
+    aggregate_language_characters
+)
 from geo_utils import get_country_name
 from search_utils import search_repositories_by_language_and_topic
-from user_profile import (get_user_repos, get_user_total_stars)  
+from user_profile import get_user_repos, get_user_total_stars, get_user_profile
 from developer_profile_crawler import collect_developer_data
 from data_processor import process_developer_data
-from retrieval import retrieve_relevant_information, generate_skill_summary, generate_search_queries
+from retrieval import (
+    retrieve_relevant_information,
+    generate_skill_summary,
+    generate_search_queries
+)
+from rag_evaluation import helpfulness
 
+
+# ——— Logging 配置 ———
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -22,107 +43,116 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
-for handler in logging.root.handlers:
-    if isinstance(handler, logging.StreamHandler):
-        handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
-        if hasattr(handler.stream, 'encoding') and handler.stream.encoding != 'utf-8':
-            try:
-                import codecs
-                handler.stream = codecs.getwriter('utf-8')(handler.stream)
-            except:
-                pass
-
 logger = logging.getLogger(__name__)
 
+client = Client()
+dataset_name = "Developer Skill Summary"
+
+try:
+    dataset = client.create_dataset(dataset_name)
+    
+except LangSmithConflictError:
+    all_datasets = client.list_datasets()
+    dataset = next(ds for ds in all_datasets if ds.name == dataset_name)
+
+    # 把 generator 转为 list
+    existing_examples = list(client.list_examples(dataset_id=dataset.id))
+    if existing_examples:
+        print(f"数据集 '{dataset_name}' 已存在且包含 {len(existing_examples)} 条数据。")
+        print("无参考模式下，这些数据不会被用于评估。")
+    else:
+        print(f"数据集 '{dataset_name}' 已存在，当前为空。")
+
+# ——— Flask 应用 & CORS ———
 app = Flask(__name__)
-CORS(app)  # 启用CORS
+CORS(app)
+
+# ——— Flask-Caching 配置 ———
+app.config.from_mapping({
+    "CACHE_TYPE": "filesystem",          # 可选 "simple", "redis" 等
+    "CACHE_DIR": "flask_cache",          # filesystem 时的缓存目录
+    "CACHE_DEFAULT_TIMEOUT": 3600        # 默认 1 小时
+})
+cache = Cache(app)
+
+
+# ——— 缓存封装函数 ———
+
+@cache.memoize(timeout=3600)
+def predict_country_cached(username):
+    """对 predict_developer_country(username) 缓存 1 小时"""
+    return predict_developer_country(username)
+
+
+@cache.memoize(timeout=1800)
+def analyze_domains_cached(username, owner_repos_json):
+    """
+    对领域分析做缓存，缓存 30 分钟。
+    参数 owner_repos_json: JSON 字符串形式的 owner_repos 列表。
+    """
+    owner_repos = json.loads(owner_repos_json)
+    domains = get_developer_domains_weighted(
+        username,
+        owner_repos,
+        apply_tfidf=True,
+        apply_softmax=True,
+        softmax_temp=0.5
+    )
+    stats = aggregate_language_characters(owner_repos)
+    return convert_numpy(domains), stats
+
+
+# ——— API：获取单个开发者信息 ———
 
 @app.route('/api/developer/<username>', methods=['GET'])
 def get_developer_info(username):
-    """获取单个开发者的详细信息"""
     try:
         logger.info(f"开始获取开发者信息: '{username}'")
-        
-        # 获取国家预测信息
-        country_prediction = predict_developer_country(username)       
-        
-        # 获取仓库信息
-        try:
-            user_repo = get_user_repos(username)
-            owner_repos = [repo for repo in user_repo if repo["repo_type"] == "owner"]
-            member_repos = [repo for repo in user_repo if repo["repo_type"] == "member"]
-            logger.info(f"获取到用户 '{username}' 的仓库信息: {len(user_repo)} 个仓库")
-        except Exception as e:
-            logger.warning(f"获取用户 '{username}' 的仓库信息失败: {str(e)}")
-            user_repo = []
-            owner_repos = []
-            member_repos = []
-        
-        # 获取贡献信息
-        try:
-            contribution_data = get_user_contributed_repos(username)
-            logger.info(f"获取到用户 '{username}' 的贡献信息")
-            contribution_score = evaluate_overall_contribution(contribution_data)
-        except Exception as e:
-            logger.warning(f"获取用户 '{username}' 的贡献信息失败: {str(e)}")
-            contribution_data = []
-            contribution_score = 0
-        
-        # 获取star总数
-        try:
-            total_stars = get_user_total_stars(username)
-            logger.info(f"获取到用户 '{username}' 的star总数: {total_stars}")
-        except Exception as e:
-            logger.warning(f"获取用户 '{username}' 的star总数失败: {str(e)}")
-            total_stars = 0
-        
-        # 计算TalentRank评分
-        followers_count = 0
-        if country_prediction and country_prediction.get("profile_location"):
-            followers_count = country_prediction.get("profile_location", {}).get("关注者数", 0)
-        
-        talent_rank_score = calculate_talent_rank(
-            total_stars,
-            followers_count,
-            contribution_score
-        )
-        logger.info(f"计算用户 '{username}' 的TalentRank评分: {talent_rank_score}")
-        
-        # 处理国家预测结果，确保即使在低置信度时也能显示预测结果
-        prediction = country_prediction.get("prediction", {})
-        
-        # 如果预测结果存在但置信度低，添加额外的显示信息
-        if prediction and prediction.get("predicted_country") != "Unknown":
-            confidence = prediction.get("confidence", 0)
-            confidence_level = prediction.get("confidence_level", "低")
-            
-            # 添加格式化的预测结果，包含置信度信息
-            country_code = prediction.get("predicted_country")
-            country_name = get_country_name(country_code)
-            
-            # 添加格式化的预测结果字段
-            prediction["formatted_prediction"] = f"{country_name} ({confidence_level}置信度: {confidence:.2f})"
-            
-            # 添加是否应该显示预测结果的标志
-            # 即使置信度低，也显示预测结果，但标记为低置信度
-            prediction["should_display"] = True
-            
-            logger.info(f"用户 '{username}' 的国家预测结果已格式化: {prediction['formatted_prediction']}")
-        
-        # 分析开发者技术领域
-        try:
-            domains = get_developer_domains_weighted(username, owner_repos,
-                                                    apply_tfidf=True,
-                                                    apply_softmax=True,
-                                                    softmax_temp=0.5)
-            language_character_stats = aggregate_language_characters(owner_repos)
-            logger.info(f"用户 '{username}' 的技术领域详细信息:\n{json.dumps(convert_numpy(domains), indent=2, ensure_ascii=False)}")
-        except Exception as e:
-            logger.warning(f"分析用户 '{username}' 的技术领域失败: {str(e)}")
-            domains = {}
 
-        response_data = {
+        # 1. 国家预测（从缓存取或计算）
+        country_prediction = predict_country_cached(username)
+
+        # 2. 获取仓库列表
+        user_repo = get_user_repos(username)
+        owner_repos = [r for r in user_repo if r["repo_type"] == "owner"]
+        member_repos = [r for r in user_repo if r["repo_type"] == "member"]
+        logger.info(f"获取到用户 '{username}' 的仓库: {len(user_repo)} 个")
+
+        # 3. 领域分析（从缓存取或计算）
+        owner_json = json.dumps(owner_repos, sort_keys=True, default=str)
+        domains, language_character_stats = analyze_domains_cached(username, owner_json)
+        logger.info(f"获取到用户 '{username}' 的领域分析结果")
+
+        # 4. 贡献信息
+        contribution_data = get_user_contributed_repos(username)
+        contribution_score = evaluate_overall_contribution(contribution_data)
+
+        # 5. Star 总数
+        total_stars = get_user_total_stars(username)
+
+        # 6. TalentRank 评分
+        followers_count = (
+            country_prediction.get("profile_location", {})
+            .get("关注者数", 0)
+        )
+        talent_rank_score = calculate_talent_rank(
+            total_stars, followers_count, contribution_score
+        )
+
+        # 7. 格式化国家预测输出
+        prediction = country_prediction.get("prediction", {})
+        if prediction.get("predicted_country") != "Unknown":
+            code = prediction["predicted_country"]
+            name = get_country_name(code)
+            conf = prediction.get("confidence", 0)
+            level = prediction.get("confidence_level", "低")
+            prediction["formatted_prediction"] = (
+                f"{name} ({level} 置信度: {conf:.2f})"
+            )
+            prediction["should_display"] = True
+
+        # 8. 返回 JSON
+        return jsonify({
             "username": username,
             "profile": country_prediction.get("profile_location", {}),
             "country_prediction": prediction,
@@ -132,16 +162,14 @@ def get_developer_info(username):
             "contributions": member_repos,
             "total_stars": total_stars,
             "talent_rank_score": talent_rank_score,
-            "domains": convert_numpy(domains),
-            "language_character_stats" : language_character_stats
-        }
-        
-        return jsonify(response_data)
-        
+            "domains": domains,
+            "language_character_stats": language_character_stats
+        })
+
     except Exception as e:
-        logger.error(f"获取开发者信息时发生错误: {str(e)}", exc_info=True)
+        logger.error(f"获取开发者信息失败: {e}", exc_info=True)
         return jsonify({
-            "error": str(e), 
+            "error": str(e),
             "message": "服务器处理请求时发生错误",
             "username": username,
             "profile": {},
@@ -186,7 +214,7 @@ def analyze_developer_skills(username):
             logger.info(f"找到开发者 '{username}' 的现有向量存储")
         
         # 获取用户查询
-        query = request.args.get('query', '技术能力分析')
+        query = request.args.get('query', '技术能力分析总结')
         
         # 生成扩展查询
         queries = generate_search_queries(query)
@@ -207,20 +235,46 @@ def analyze_developer_skills(username):
                 unique_results.append(result)
         
         # 根据相关性排序
-        sorted_results = sorted(unique_results, key=lambda x: x["score"])
+        sorted_results = sorted(unique_results, key=lambda x: x["score"], reverse=True)
         
         # 最多取前10个结果
         top_results = sorted_results[:10]
         
-        # 生成技术能力总结
-        summary_result = generate_skill_summary(username, top_results)
+        context = ""
+        seen_hashes = set()
+        for result in top_results:
+            source = result["metadata"].get("source", "Unknown")
+            content = result["content"]
+            h = hash(content)
+            if h in seen_hashes:
+                continue
+            seen_hashes.add(h)
+            context += f"===来源: {source}===\n{content}\n\n"
+
+        @traceable
+        def skill_summary_fn(inputs: dict) -> dict:
+            username = inputs["username"]
+            context  = inputs["context"]
+            return generate_skill_summary(username, context)
         
+        evaluation = client.evaluate(
+            skill_summary_fn,
+            data=dataset.id,
+            evaluators=[helpfulness],
+            experiment_prefix="SkillSummaryGenEval",
+            max_concurrency=0,
+        )
+
+        for result in evaluation:
+            print("FULL RESULT DICT:", result)
+            print("AVAILABLE KEYS:", list(result.keys()))
+            break
+
+
         return jsonify({
             "username": username,
             "query": query,
             "expanded_queries": queries,
-            "skill_summary": summary_result["summary"],
-            "model": summary_result["model"],
             "search_results": top_results
         })
         
@@ -279,12 +333,13 @@ def search_by_domain():
             try:
                 # 使用新的国家预测功能
                 # country_prediction = predict_developer_country(username)
-                country_prediction = {
-                    "profile_location": {},
-                    "prediction": {"predicted_country": "Unknown", "confidence": 0},
-                    "timezone_analysis": {},
-                    "language_culture": {}
-                }
+                profile = get_user_profile(username)
+                # country_prediction = {
+                #     "profile_location": {},
+                #     "prediction": {"predicted_country": "Unknown", "confidence": 0},
+                #     "timezone_analysis": {},
+                #     "language_culture": {}
+                # }
                 
                 # 尝试获取仓库信息
                 try:
@@ -313,8 +368,7 @@ def search_by_domain():
                 
                 # 计算TalentRank评分
                 followers_count = 0
-                if country_prediction and country_prediction.get("profile_location"):
-                    followers_count = country_prediction.get("profile_location", {}).get("关注者数", 0)
+                followers_count = profile.get("关注者数", 0)
                 
                 talent_rank_score = calculate_talent_rank(
                     total_stars,
@@ -338,10 +392,10 @@ def search_by_domain():
                 
                 developer_info = {
                     "username": username,
-                    "profile": {} if not country_prediction else country_prediction.get("profile_location", {}),
-                    "country_prediction": {"predicted_country": "Unknown", "confidence": 0} if not country_prediction else country_prediction.get("prediction", {}),
-                    "timezone_analysis": {} if not country_prediction else country_prediction.get("timezone_analysis", {}),
-                    "language_culture": {} if not country_prediction else country_prediction.get("language_culture", {}),
+                    "profile": profile,
+                    # "country_prediction": {"predicted_country": "Unknown", "confidence": 0} if not country_prediction else country_prediction.get("prediction", {}),
+                    # "timezone_analysis": {} if not country_prediction else country_prediction.get("timezone_analysis", {}),
+                    # "language_culture": {} if not country_prediction else country_prediction.get("language_culture", {}),
                     "repositories": owner_repos,
                     "contributions": member_repos,
                     "total_stars": total_stars,
@@ -357,7 +411,7 @@ def search_by_domain():
                     "username": username,
                     "error": f"处理数据时发生错误: {str(e)}",
                     "profile": {},
-                    "country_prediction": {"predicted_country": "Unknown", "confidence": 0},
+                    # "country_prediction": {"predicted_country": "Unknown", "confidence": 0},
                     "repositories": [],
                     "contributions": [],
                     "total_stars": 0,
