@@ -4,7 +4,8 @@ headers = {"Authorization": f"token {GITHUB_TOKEN}"}
 CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 200
 DOWNLOAD_DIR = "./downloaded"
-MODEL_NAME = "llama3.2"
+MODEL_NAME = "deepseek-r1:7b"
+EVA_MODEL_NAME = "qwen3:8b"
 EMBEDDING_MODEL_NAME = "nomic-embed-text"
 PROMPT = '''
 你是一个专门用于开发者技术能力分析的查询生成器。
@@ -88,3 +89,14 @@ TOP_K_RESULTS = 5  # 默认返回前5个最相关结果
 # 错误处理相关配置
 MAX_RETRIES = 3  # 请求失败时的最大重试次数
 RETRY_DELAY = 1  # 重试间隔（秒）
+
+from langchain_community.llms import Ollama
+
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+
+OLLAMA_LLM = Ollama(
+    model=EVA_MODEL_NAME,
+    base_url=OLLAMA_BASE_URL,
+    temperature=0,
+    verbose=False,
+)
