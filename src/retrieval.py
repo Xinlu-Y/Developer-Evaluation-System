@@ -53,26 +53,13 @@ def get_llm():
     """获取大语言模型实例"""
     return ChatOllama(model=MODEL_NAME)
 
-def generate_skill_summary(username, search_results):
+def generate_skill_summary(username, context):
     """生成技术能力总结"""
-    if not search_results:
-        return {"summary": "未找到相关信息，无法生成技术能力总结。", "model": MODEL_NAME}
-    
-    # 构建上下文（避免重复内容）
-    context = ""
-    seen_contents = set()  # 用于跟踪已处理过的内容
-    
-    for result in search_results:
-        source = result["metadata"]["source"]
-        content = result["content"]
-        
-        # 跳过重复内容 - 使用内容的哈希值作为唯一标识
-        content_hash = hash(content)
-        if content_hash in seen_contents:
-            continue
-        
-        seen_contents.add(content_hash)
-        context += f"===来源: {source}===\n{content}\n\n"
+    if not context.strip():
+        return { "prompt": "", 
+                "summary": "未找到相关信息，无法生成技术能力总结。", 
+                "context": context, 
+                "model": MODEL_NAME}
     
     # 使用配置中的提示模板
     prompt_template = SKILL_ANALYSIS_PROMPT
@@ -82,6 +69,9 @@ def generate_skill_summary(username, search_results):
         input_variables=["username", "context"]
     )
     
+    prompt_vars = {"username": username, "context": context}
+    prompt_text = prompt.format(**prompt_vars)
+
     # 使用RunnableSequence方式
     llm = get_llm()
     chain = prompt | llm
@@ -120,10 +110,10 @@ def generate_skill_summary(username, search_results):
         clean_summary = re.sub(r'(\*\s+.+?\n\*\s+.+?)\n\*\s+', r'\1\n* ', clean_summary)
         
         # 返回包含模型名称的结果
-        return {"summary": clean_summary, "model": MODEL_NAME}
+        return {"summary": clean_summary}
     except Exception as e:
         logger.error(f"生成技术能力总结失败: {str(e)}")
-        return {"summary": f"生成总结时发生错误: {str(e)}", "model": MODEL_NAME}
+        return {"summary": f"生成总结时发生错误: {str(e)}"}
 
 def generate_search_queries(query):
     """使用大语言模型扩展原始查询，生成更多相关查询"""

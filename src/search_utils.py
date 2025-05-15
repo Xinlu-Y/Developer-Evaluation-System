@@ -3,7 +3,7 @@ import time
 import requests
 from config import headers
 
-def search_repositories_by_language_and_topic(language, topic, max_results=10):
+def search_repositories_by_language_and_topic(language, topic, max_results):
     """
     使用 GitHub 搜索 API 组合搜索项目，按编程语言和主题标签筛选，
     并只返回个人用户创建的项目。分页获取最多 max_results 条结果。
