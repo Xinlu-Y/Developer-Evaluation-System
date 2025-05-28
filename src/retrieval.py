@@ -84,9 +84,10 @@ def generate_skill_summary(username, context):
         if hasattr(raw_summary, 'content'):
             raw_summary = raw_summary.content
         
+        raw_summary_no_think = re.sub(r'<think>.*?</think>', '', raw_summary, flags=re.DOTALL).strip()
         # 高效的去重处理
         # 1. 按段落拆分
-        paragraphs = [p.strip() for p in raw_summary.split("\n\n") if p.strip()]
+        paragraphs = [p.strip() for p in raw_summary_no_think.split("\n\n") if p.strip()]
         
         # 2. 创建去重后的段落列表
         unique_paragraphs = []
@@ -110,10 +111,10 @@ def generate_skill_summary(username, context):
         clean_summary = re.sub(r'(\*\s+.+?\n\*\s+.+?)\n\*\s+', r'\1\n* ', clean_summary)
         
         # 返回包含模型名称的结果
-        return {"summary": clean_summary}
+        return {"summary": clean_summary, "model": MODEL_NAME}
     except Exception as e:
         logger.error(f"生成技术能力总结失败: {str(e)}")
-        return {"summary": f"生成总结时发生错误: {str(e)}"}
+        return {"summary": f"生成总结时发生错误: {str(e)}", "model": MODEL_NAME}
 
 def generate_search_queries(query):
     """使用大语言模型扩展原始查询，生成更多相关查询"""

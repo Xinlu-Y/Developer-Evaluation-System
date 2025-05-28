@@ -250,32 +250,37 @@ def analyze_developer_skills(username):
                 continue
             seen_hashes.add(h)
             context += f"===来源: {source}===\n{content}\n\n"
+        summary_result = generate_skill_summary(username, context)
 
-        @traceable
-        def skill_summary_fn(inputs: dict) -> dict:
-            username = inputs["username"]
-            context  = inputs["context"]
-            return generate_skill_summary(username, context)
+        # 注释部分用于LangSmith评估器评估LLM生成的总结内容
+        # @traceable
+        # def skill_summary_fn(inputs: dict) -> dict:
+        #     username = inputs["username"]
+        #     context  = inputs["context"]
+        #     return generate_skill_summary(username, context)
         
-        evaluation = client.evaluate(
-            skill_summary_fn,
-            data=dataset.id,
-            evaluators=[helpfulness],
-            experiment_prefix="SkillSummaryGenEval",
-            max_concurrency=0,
-        )
+        # evaluation = client.evaluate(
+        #     skill_summary_fn,
+        #     data=dataset.id,
+        #     evaluators=[helpfulness],
+        #     experiment_prefix="SkillSummaryGenEval",
+        #     max_concurrency=0,
+        # )
 
-        for result in evaluation:
-            print("FULL RESULT DICT:", result)
-            print("AVAILABLE KEYS:", list(result.keys()))
-            break
+        # for result in evaluation:
+        #     print("FULL RESULT DICT:", result)
+        #     print("AVAILABLE KEYS:", list(result.keys()))
+        #     break
 
 
         return jsonify({
             "username": username,
             "query": query,
             "expanded_queries": queries,
-            "search_results": top_results
+            "search_results": top_results,
+            "skill_summary": summary_result["summary"],
+            "model": summary_result["model"],
+            "search_results": top_results,
         })
         
     except Exception as e:

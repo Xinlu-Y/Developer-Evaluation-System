@@ -7,6 +7,20 @@ DOWNLOAD_DIR = "./downloaded"
 MODEL_NAME = "deepseek-r1:7b"
 EVA_MODEL_NAME = "qwen3:8b"
 EMBEDDING_MODEL_NAME = "nomic-embed-text"
+TOP_K_RESULTS = 5
+MAX_RETRIES = 3
+RETRY_DELAY = 1
+
+from langchain_community.llms import Ollama
+
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+
+OLLAMA_LLM = Ollama(
+    model=EVA_MODEL_NAME,
+    base_url=OLLAMA_BASE_URL,
+    temperature=0,
+    verbose=False,
+)
 PROMPT = '''
 你是一个专门用于开发者技术能力分析的查询生成器。
 当前日期是{date}。
@@ -37,7 +51,6 @@ PROMPT = '''
 **输入查询:** {input_query}
 '''
 
-# 开发者技术能力分析相关配置
 SKILL_ANALYSIS_PROMPT = '''
 你是一位技术能力评估专家，正在分析GitHub开发者的信息，为招聘和技术合作提供专业评估。
 请根据以下关于开发者 {username} 的信息，全面分析并总结其技术能力、专长领域和技术特点。
@@ -72,31 +85,5 @@ SKILL_ANALYSIS_PROMPT = '''
 {context}
 
 请提供一个系统化、专业且全面的技术能力评估，重点突出核心技术优势和特色。评估应基于所提供信息，避免过度推测。
-回答应为中文，结构清晰，突出重点，使用技术领域专业语言，客观公正地评价开发者的技术能力。
+回答应为中文，结构清晰，突出重点，使用技术领域专业语言，客观公正地评价开发者的技术能力，不要输出think部分的内容。
 '''
-
-# GitHub API限制相关配置
-API_RATE_LIMIT = 60  # 每小时API请求限制
-API_RATE_REMAINING = 60  # 剩余API请求次数
-API_RATE_RESET = 0  # API限制重置时间
-
-# 数据缓存相关配置
-CACHE_EXPIRY = 86400  # 缓存过期时间（秒），默认为24小时
-
-# 向量搜索相关配置
-TOP_K_RESULTS = 5  # 默认返回前5个最相关结果
-
-# 错误处理相关配置
-MAX_RETRIES = 3  # 请求失败时的最大重试次数
-RETRY_DELAY = 1  # 重试间隔（秒）
-
-from langchain_community.llms import Ollama
-
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-
-OLLAMA_LLM = Ollama(
-    model=EVA_MODEL_NAME,
-    base_url=OLLAMA_BASE_URL,
-    temperature=0,
-    verbose=False,
-)
