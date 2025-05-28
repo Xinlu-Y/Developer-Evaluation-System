@@ -7,7 +7,8 @@
 项目包含一个 Python 后端 (Flask API)，负责数据收集、分析及与 LLM 的交互；以及一个 Vue.js 前端，提供用户界面来搜索开发者并展示评估结果。
 
 ## 🎥 demo
-<video controls src="./assets/recording.mp4" title="Title"></video>
+![demo](./assets/recording.gif)
+（注：视频经过倍速处理）
 
 ## ✨ 主要功能
 ![alt text](./assets/image-1.png)
